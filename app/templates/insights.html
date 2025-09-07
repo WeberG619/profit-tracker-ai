@@ -16,8 +16,10 @@
     <!-- Alert Section -->
     <div id="alertsSection" class="mb-8">
         <h3 class="text-xl font-semibold mb-4">Active Alerts</h3>
-        <div id="alertsContainer" class="grid gap-4">
-            <!-- Alerts will be loaded here -->
+        <div class="min-h-[120px]">
+            <div id="alertsContainer" class="grid gap-4">
+                <!-- Alerts will be loaded here -->
+            </div>
         </div>
     </div>
     
@@ -26,21 +28,41 @@
         <!-- Profit Trend Chart -->
         <div class="bg-white rounded-lg shadow-md p-6">
             <h3 class="text-lg font-semibold mb-4">Profit Trends (30 Days)</h3>
-            <canvas id="profitTrendChart" height="200"></canvas>
+            <div class="relative" style="height: 300px;">
+                <canvas id="profitTrendChart"></canvas>
+                <div id="profitTrendEmpty" class="absolute inset-0 flex items-center justify-center text-gray-500 hidden">
+                    <div class="text-center">
+                        <i class="fas fa-chart-line text-4xl mb-2 text-gray-300"></i>
+                        <p>No data available for profit trends</p>
+                        <p class="text-sm">Add some jobs and receipts to see trends</p>
+                    </div>
+                </div>
+            </div>
         </div>
         
         <!-- Job Type Profitability -->
         <div class="bg-white rounded-lg shadow-md p-6">
             <h3 class="text-lg font-semibold mb-4">Profitability by Job Type</h3>
-            <canvas id="jobTypeProfitChart" height="200"></canvas>
+            <div class="relative" style="height: 300px;">
+                <canvas id="jobTypeProfitChart"></canvas>
+                <div id="jobTypeProfitEmpty" class="absolute inset-0 flex items-center justify-center text-gray-500 hidden">
+                    <div class="text-center">
+                        <i class="fas fa-chart-bar text-4xl mb-2 text-gray-300"></i>
+                        <p>No job categories available</p>
+                        <p class="text-sm">Complete some jobs to see profitability by type</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     
     <!-- Pattern Insights -->
     <div class="bg-white rounded-lg shadow-md p-6 mb-8">
         <h3 class="text-lg font-semibold mb-4">Problem Patterns Detected</h3>
-        <div id="patternsContainer" class="overflow-x-auto">
-            <!-- Pattern insights will be loaded here -->
+        <div class="min-h-[200px]">
+            <div id="patternsContainer" class="overflow-x-auto">
+                <!-- Pattern insights will be loaded here -->
+            </div>
         </div>
     </div>
     
@@ -72,8 +94,10 @@
         <div class="px-6 py-4 border-b border-gray-200">
             <h3 class="text-lg font-semibold text-gray-800">Jobs Losing Money</h3>
         </div>
-        <div id="losingJobsContainer" class="overflow-x-auto">
-            <!-- Losing jobs table will be loaded here -->
+        <div class="min-h-[250px]">
+            <div id="losingJobsContainer" class="overflow-x-auto">
+                <!-- Losing jobs table will be loaded here -->
+            </div>
         </div>
     </div>
 </div>
@@ -142,7 +166,7 @@ async function loadAlerts() {
         const container = document.getElementById('alertsContainer');
         
         if (alerts.length === 0) {
-            container.innerHTML = '<p class="text-gray-500">No active alerts</p>';
+            container.innerHTML = '<div class="flex items-center justify-center h-24"><div class="text-center text-gray-500"><i class="fas fa-shield-check text-2xl mb-1 text-green-300"></i><p>All jobs are on track - no alerts</p></div></div>';
             return;
         }
         
@@ -184,7 +208,19 @@ async function loadProfitTrends() {
         const response = await fetch('/api/insights/profit-trends?days=30');
         const trends = await response.json();
         
-        const ctx = document.getElementById('profitTrendChart').getContext('2d');
+        const emptyDiv = document.getElementById('profitTrendEmpty');
+        const canvas = document.getElementById('profitTrendChart');
+        
+        if (!trends || trends.length === 0) {
+            emptyDiv.classList.remove('hidden');
+            canvas.style.display = 'none';
+            return;
+        }
+        
+        emptyDiv.classList.add('hidden');
+        canvas.style.display = 'block';
+        
+        const ctx = canvas.getContext('2d');
         
         if (profitTrendChart) {
             profitTrendChart.destroy();
@@ -232,6 +268,8 @@ async function loadProfitTrends() {
         
     } catch (error) {
         console.error('Error loading profit trends:', error);
+        document.getElementById('profitTrendEmpty').classList.remove('hidden');
+        document.getElementById('profitTrendChart').style.display = 'none';
     }
 }
 
@@ -240,7 +278,19 @@ async function loadJobTypeProfitability() {
         const response = await fetch('/api/insights/job-type-profitability');
         const data = await response.json();
         
-        const ctx = document.getElementById('jobTypeProfitChart').getContext('2d');
+        const emptyDiv = document.getElementById('jobTypeProfitEmpty');
+        const canvas = document.getElementById('jobTypeProfitChart');
+        
+        if (!data || data.length === 0) {
+            emptyDiv.classList.remove('hidden');
+            canvas.style.display = 'none';
+            return;
+        }
+        
+        emptyDiv.classList.add('hidden');
+        canvas.style.display = 'block';
+        
+        const ctx = canvas.getContext('2d');
         
         if (jobTypeProfitChart) {
             jobTypeProfitChart.destroy();
@@ -278,6 +328,8 @@ async function loadJobTypeProfitability() {
         
     } catch (error) {
         console.error('Error loading job type profitability:', error);
+        document.getElementById('jobTypeProfitEmpty').classList.remove('hidden');
+        document.getElementById('jobTypeProfitChart').style.display = 'none';
     }
 }
 
@@ -289,7 +341,7 @@ async function loadPatternInsights() {
         const container = document.getElementById('patternsContainer');
         
         if (patterns.length === 0) {
-            container.innerHTML = '<p class="text-gray-500">No patterns detected</p>';
+            container.innerHTML = '<div class="flex items-center justify-center h-40"><div class="text-center text-gray-500"><i class="fas fa-search text-3xl mb-2 text-gray-300"></i><p>No patterns detected</p><p class="text-sm">Complete more jobs to identify patterns</p></div></div>';
             return;
         }
         
@@ -331,7 +383,7 @@ async function loadLosingJobs() {
         const container = document.getElementById('losingJobsContainer');
         
         if (jobs.length === 0) {
-            container.innerHTML = '<p class="text-center py-8 text-gray-500">No jobs currently losing money</p>';
+            container.innerHTML = '<div class="flex items-center justify-center h-48"><div class="text-center text-gray-500"><i class="fas fa-check-circle text-4xl mb-2 text-green-300"></i><p>Great news! No jobs are currently losing money</p><p class="text-sm">Keep up the good work with your pricing</p></div></div>';
             return;
         }
         

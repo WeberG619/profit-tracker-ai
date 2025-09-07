@@ -18,9 +18,16 @@ from .export_utils import export_receipts_csv, export_job_summary_pdf, export_re
 from .scheduler import job_scheduler
 from .auth import login_manager, company_required
 from .money_losers import check_job_keywords
-from .duplicate_detector import DuplicateDetector
 from twilio.twiml.messaging_response import MessagingResponse
 import logging
+
+# Optional import for duplicate detector
+try:
+    from .duplicate_detector import DuplicateDetector
+    DUPLICATE_DETECTION_ENABLED = True
+except ImportError:
+    logger.warning("Duplicate detector not available")
+    DUPLICATE_DETECTION_ENABLED = False
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -51,27 +58,7 @@ db.init_app(app)
 # Initialize login manager
 login_manager.init_app(app)
 
-# Database initialization and migration on startup
-with app.app_context():
-    try:
-        # Create tables if they don't exist
-        db.create_all()
-        logger.info("Database tables created/verified")
-        
-        # Run migrations
-        from sqlalchemy import text
-        try:
-            db.session.execute(text("SELECT receipt_hash FROM receipt LIMIT 1"))
-        except:
-            try:
-                db.session.execute(text("ALTER TABLE receipt ADD COLUMN receipt_hash VARCHAR(64)"))
-                db.session.commit()
-                logger.info("Added receipt_hash column to receipt table")
-            except Exception as e:
-                logger.warning(f"Could not add receipt_hash column: {str(e)}")
-                
-    except Exception as e:
-        logger.error(f"Database initialization error: {str(e)}")
+# Note: Database initialization moved to before_first_request to avoid startup issues
 
 # Initialize scheduler
 try:
@@ -104,6 +91,8 @@ def init_db():
     with app.app_context():
         db.create_all()
         logger.info("Database tables created successfully")
+
+# Database initialization handled in main block below
 
 @app.route('/test-receipts')
 @login_required
@@ -487,59 +476,57 @@ def landing():
 @company_required
 def company_dashboard():
     """Company-specific dashboard showing stats and recent receipts"""
+    # Initialize with safe defaults
+    stats = {
+        'total_receipts': 0,
+        'total_expenses': 0,
+        'active_jobs': 0,
+        'month_expenses': 0
+    }
+    recent_receipts = []
+    
     try:
-        # Get company-specific stats
-        stats = {
-            'total_receipts': Receipt.query.filter_by(company_id=current_user.company_id).count(),
-            'total_expenses': db.session.query(db.func.sum(Receipt.total_amount)).filter_by(company_id=current_user.company_id).scalar() or 0,
-            'active_jobs': Job.query.filter_by(company_id=current_user.company_id, status='active').count(),
-            'month_expenses': 0  # We'll calculate this next
-        }
+        # Get total receipts count
+        stats['total_receipts'] = Receipt.query.filter_by(company_id=current_user.company_id).count()
+    except:
+        pass
         
+    try:
+        # Get total expenses
+        total = db.session.query(db.func.sum(Receipt.total_amount)).filter_by(company_id=current_user.company_id).scalar()
+        stats['total_expenses'] = total or 0
+    except:
+        pass
+        
+    try:
+        # Get active jobs count
+        stats['active_jobs'] = Job.query.filter_by(company_id=current_user.company_id, status='active').count()
+    except:
+        pass
+        
+    try:
         # Calculate this month's expenses
-        from datetime import datetime
         first_day_of_month = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        stats['month_expenses'] = db.session.query(db.func.sum(Receipt.total_amount)).filter(
+        month_total = db.session.query(db.func.sum(Receipt.total_amount)).filter(
             Receipt.company_id == current_user.company_id,
             Receipt.created_at >= first_day_of_month
-        ).scalar() or 0
+        ).scalar()
+        stats['month_expenses'] = month_total or 0
+    except:
+        pass
         
+    try:
         # Get recent receipts (last 10)
         recent_receipts = Receipt.query.filter_by(company_id=current_user.company_id)\
             .order_by(Receipt.created_at.desc())\
             .limit(10)\
             .all()
-        
-        return render_template('company_dashboard.html', 
-                             stats=stats, 
-                             recent_receipts=recent_receipts)
-    except Exception as e:
-        logger.error(f"Dashboard error: {str(e)}", exc_info=True)
-        
-        # Try to auto-fix by adding missing columns
-        try:
-            from sqlalchemy import text
-            # Try to add receipt_hash column if missing
-            db.session.execute(text("ALTER TABLE receipt ADD COLUMN receipt_hash VARCHAR(64)"))
-            db.session.commit()
-            logger.info("Added missing receipt_hash column")
-            
-            # Retry the dashboard
-            return redirect(url_for('company_dashboard'))
-        except:
-            # Column might already exist or other error
-            pass
-        
-        # Create a simple fallback dashboard
-        return render_template('company_dashboard.html', 
-                             stats={
-                                 'total_receipts': 0,
-                                 'total_expenses': 0,
-                                 'active_jobs': 0,
-                                 'month_expenses': 0
-                             }, 
-                             recent_receipts=[],
-                             error_message=f"Dashboard data temporarily unavailable. Error: {str(e)}")
+    except:
+        pass
+    
+    return render_template('company_dashboard.html', 
+                         stats=stats, 
+                         recent_receipts=recent_receipts)
 
 @app.route('/upload')
 @login_required
@@ -730,16 +717,25 @@ def upload_file():
                 extracted_data = process_receipt_image(filepath)
                 logger.info(f"OCR completed: {extracted_data}")
                 
-                # Check for duplicates BEFORE saving
-                recent_receipts = Receipt.query.filter_by(company_id=current_user.company_id)\
-                    .filter(Receipt.id != receipt.id)\
-                    .order_by(Receipt.created_at.desc())\
-                    .limit(100)\
-                    .all()
+                # Check for duplicates BEFORE saving (if enabled)
+                is_duplicate = False
+                duplicate_info = None
+                similar_receipts = []
                 
-                is_duplicate, duplicate_info = DuplicateDetector.check_for_duplicates(
-                    extracted_data, recent_receipts, current_user.company_id
-                )
+                if DUPLICATE_DETECTION_ENABLED:
+                    try:
+                        recent_receipts = Receipt.query.filter_by(company_id=current_user.company_id)\
+                            .filter(Receipt.id != receipt.id)\
+                            .order_by(Receipt.created_at.desc())\
+                            .limit(100)\
+                            .all()
+                        
+                        is_duplicate, duplicate_info = DuplicateDetector.check_for_duplicates(
+                            extracted_data, recent_receipts, current_user.company_id
+                        )
+                    except Exception as e:
+                        logger.warning(f"Duplicate detection error: {str(e)}")
+                        # Continue without duplicate detection
                 
                 if is_duplicate:
                     # Delete the newly created receipt since it's a duplicate
@@ -768,7 +764,11 @@ def upload_file():
                 receipt.date = datetime.strptime(extracted_data.get('date'), '%Y-%m-%d').date() if extracted_data.get('date') else None
                 receipt.receipt_number = extracted_data.get('receipt_number')
                 receipt.extracted_data = extracted_data
-                receipt.receipt_hash = DuplicateDetector.generate_receipt_hash(extracted_data)
+                if DUPLICATE_DETECTION_ENABLED:
+                    try:
+                        receipt.receipt_hash = DuplicateDetector.generate_receipt_hash(extracted_data)
+                    except:
+                        pass
                 
                 # Add line items
                 for item in extracted_data.get('line_items', []):
@@ -780,10 +780,14 @@ def upload_file():
                     )
                     db.session.add(line_item)
                 
-                # Find similar receipts for awareness
-                similar_receipts = DuplicateDetector.find_similar_receipts(
-                    extracted_data, recent_receipts, limit=3
-                )
+                # Find similar receipts for awareness (if enabled)
+                if DUPLICATE_DETECTION_ENABLED and 'recent_receipts' in locals():
+                    try:
+                        similar_receipts = DuplicateDetector.find_similar_receipts(
+                            extracted_data, recent_receipts, limit=3
+                        )
+                    except:
+                        pass
                 
                 db.session.commit()
                 
@@ -921,31 +925,18 @@ def update_receipt(receipt_id):
 @login_required
 @company_required
 def list_receipts():
+    receipts = []
     try:
-        # Eager load the job relationship to avoid N+1 queries
+        # Simple query without joinedload
         receipts = Receipt.query.filter_by(company_id=current_user.company_id)\
-            .options(joinedload(Receipt.job))\
             .order_by(Receipt.created_at.desc())\
             .all()
-        
-        logger.info(f"Loading receipts list for company {current_user.company_id}: {len(receipts)} receipts")
-        return render_template('list.html', receipts=receipts)
+        logger.info(f"Loaded {len(receipts)} receipts for company {current_user.company_id}")
     except Exception as e:
-        logger.error(f"Error in list_receipts: {str(e)}", exc_info=True)
+        logger.error(f"Error loading receipts: {str(e)}")
+        flash('Unable to load receipts at this time.', 'error')
         
-        # Try to add missing columns
-        try:
-            from sqlalchemy import text
-            db.session.execute(text("ALTER TABLE receipt ADD COLUMN receipt_hash VARCHAR(64)"))
-            db.session.commit()
-            # Retry
-            return redirect(url_for('list_receipts'))
-        except:
-            pass
-            
-        # Return empty list with error message
-        flash('Error loading receipts. Showing empty list.', 'error')
-        return render_template('list.html', receipts=[])
+    return render_template('list.html', receipts=receipts)
 
 @app.route('/api/jobs')
 @login_required

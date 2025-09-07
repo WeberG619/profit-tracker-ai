@@ -23,8 +23,10 @@ class Config:
         SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
         print("WARNING: Using in-memory SQLite database. Data will not persist!")
     else:
-        # Local development
-        SQLALCHEMY_DATABASE_URI = 'sqlite:///instance/receipts.db'
+        # Local development - use absolute path to avoid path issues
+        import os
+        db_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'instance', 'receipts.db'))
+        SQLALCHEMY_DATABASE_URI = f'sqlite:///{db_path}'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     UPLOAD_FOLDER = 'uploads'
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
