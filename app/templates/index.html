@@ -31,7 +31,7 @@
         
         <div class="mb-6">
             <label class="block text-gray-700 text-lg font-bold mb-4">
-                Select Receipt Image
+                Select Receipt/Invoice
             </label>
             
             <!-- File input with camera capture for mobile -->
@@ -53,11 +53,11 @@
                 <label>
                     <input type="file" 
                            id="fileInput" 
-                           accept="image/*"
+                           accept="image/*,.pdf"
                            class="hidden">
                     <div class="bg-green-500 text-white py-4 px-6 rounded-lg text-center cursor-pointer hover:bg-green-600 transition-colors">
                         <i class="fas fa-file-upload text-2xl mb-2"></i>
-                        <p class="text-lg font-semibold">Choose from Gallery/Files</p>
+                        <p class="text-lg font-semibold">Choose Image or PDF</p>
                     </div>
                 </label>
             </div>
@@ -66,8 +66,8 @@
             <div id="dropZone" 
                  class="hidden md:block mt-4 border-4 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors">
                 <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-3"></i>
-                <p class="text-lg text-gray-600">Or drag and drop image here</p>
-                <p class="text-sm text-gray-500 mt-2">PNG, JPG, JPEG, GIF, BMP, WEBP (max 16MB)</p>
+                <p class="text-lg text-gray-600">Or drag and drop file here</p>
+                <p class="text-sm text-gray-500 mt-2">Images: PNG, JPG, JPEG, GIF | Documents: PDF (max 16MB)</p>
             </div>
         </div>
         
@@ -110,8 +110,12 @@
     function handleFileSelect(file) {
         if (!file) return;
         
-        if (!file.type.match('image.*')) {
-            alert('Please select an image file');
+        // Check if file is image or PDF
+        const isImage = file.type.match('image.*');
+        const isPDF = file.type === 'application/pdf';
+        
+        if (!isImage && !isPDF) {
+            alert('Please select an image or PDF file');
             return;
         }
         
@@ -123,12 +127,27 @@
         selectedFile = file;
         
         // Show preview
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            previewImage.src = e.target.result;
+        if (isImage) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImage.src = e.target.result;
+                preview.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        } else if (isPDF) {
+            // For PDF, show a placeholder
+            preview.innerHTML = `
+                <h3 class="text-lg font-bold mb-2">Selected File:</h3>
+                <div class="bg-gray-100 p-4 rounded-lg flex items-center">
+                    <i class="fas fa-file-pdf text-red-500 text-3xl mr-3"></i>
+                    <div>
+                        <p class="font-semibold">${file.name}</p>
+                        <p class="text-sm text-gray-600">${(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                    </div>
+                </div>
+            `;
             preview.classList.remove('hidden');
-        };
-        reader.readAsDataURL(file);
+        }
     }
     
     fileInput.addEventListener('change', (e) => {
