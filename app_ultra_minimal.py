@@ -93,5 +93,19 @@ def invoices():
 def health():
     return {'status': 'ok', 'app': 'ultra_minimal'}
 
+@app.route('/debug')
+def debug():
+    import sys
+    return f'''
+    <h1>Debug Info</h1>
+    <ul>
+        <li>Python Version: {sys.version}</li>
+        <li>Flask Version: {Flask.__version__ if hasattr(Flask, '__version__') else 'Unknown'}</li>
+        <li>Environment: {os.environ.get('RENDER', 'Not on Render')}</li>
+        <li>Port: {os.environ.get('PORT', 'Not set')}</li>
+        <li>Routes: {', '.join([rule.endpoint for rule in app.url_map.iter_rules()])}</li>
+    </ul>
+    '''
+
 if __name__ == '__main__':
     app.run()
