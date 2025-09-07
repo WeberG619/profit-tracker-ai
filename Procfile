@@ -1,2 +1,2 @@
-release: echo "Running release phase..." && python check_db_connection.py && python create_tables.py && python run_migrations.py && python fix_login_issue.py && echo "Release phase complete."
+release: echo "Running release phase..." && python init_app.py && echo "Release phase complete."
 web: gunicorn wsgi:app --workers 4 --timeout 120 --log-file - --log-level debug

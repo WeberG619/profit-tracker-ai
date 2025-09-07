@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, s
 from flask_login import login_user, logout_user, login_required, current_user
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import joinedload
+from sqlalchemy import text
 from werkzeug.utils import secure_filename
 import os
 import io
@@ -470,6 +471,41 @@ def landing():
     if current_user.is_authenticated:
         return redirect(url_for('company_dashboard'))
     return render_template('landing.html')
+
+@app.route('/health')
+def health_check():
+    """Health check endpoint for debugging"""
+    status = {
+        'status': 'ok',
+        'database': 'unknown',
+        'tables': [],
+        'users': 0,
+        'companies': 0,
+        'environment': {
+            'FLASK_ENV': os.getenv('FLASK_ENV', 'not set'),
+            'DATABASE_URL': 'configured' if os.getenv('DATABASE_URL') else 'not set',
+            'ANTHROPIC_API_KEY': 'configured' if os.getenv('ANTHROPIC_API_KEY') else 'not set',
+        }
+    }
+    
+    try:
+        # Test database connection
+        db.session.execute(text('SELECT 1'))
+        status['database'] = 'connected'
+        
+        # Check tables
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        status['tables'] = inspector.get_table_names()
+        
+        # Count records
+        status['users'] = User.query.count()
+        status['companies'] = Company.query.count()
+        
+    except Exception as e:
+        status['database'] = f'error: {str(e)}'
+    
+    return jsonify(status)
 
 @app.route('/dashboard')
 @login_required
