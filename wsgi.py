@@ -8,6 +8,10 @@ import sys
 # Add the app directory to the Python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+# Force PostgreSQL if DATABASE_URL exists
+if os.environ.get('DATABASE_URL'):
+    import force_postgresql
+
 from app.app import app
 
 if __name__ == '__main__':
