@@ -65,6 +65,22 @@ def create_page(title, content, show_nav=False):
 </html>
     '''
 
+# Error handlers
+@app.errorhandler(404)
+def not_found(e):
+    return create_page('404 Not Found', '<h1>Page not found</h1><p><a href="/">Go home</a></p>')
+
+@app.errorhandler(500)
+def server_error(e):
+    import traceback
+    error_msg = traceback.format_exc()
+    app.logger.error(f'Server Error: {error_msg}')
+    # In production, show a simple error message
+    if os.environ.get('RENDER'):
+        return create_page('Error', '<h1>Something went wrong</h1><p><a href="/">Go home</a></p>')
+    # In development, show the full error
+    return f'<pre>{error_msg}</pre>', 500
+
 @app.route('/')
 def index():
     if session.get('username'):
