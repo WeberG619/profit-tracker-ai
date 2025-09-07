@@ -625,9 +625,32 @@ def upload_file():
 @login_required
 @company_required
 def review_receipt(receipt_id):
-    receipt = Receipt.query.filter_by(id=receipt_id, company_id=current_user.company_id).first_or_404()
-    jobs = Job.query.filter_by(status='active', company_id=current_user.company_id).all()
-    return render_template('review.html', receipt=receipt, jobs=jobs)
+    try:
+        # Load receipt with line_items
+        receipt = Receipt.query.filter_by(
+            id=receipt_id, 
+            company_id=current_user.company_id
+        ).first_or_404()
+        
+        jobs = Job.query.filter_by(company_id=current_user.company_id).all()
+        
+        # Log receipt data for debugging
+        logger.info(f"Receipt data: vendor_name={receipt.vendor_name}, total={receipt.total_amount}, image_path={receipt.image_path}")
+        logger.info(f"Line items count: {len(receipt.line_items)}")
+        
+        # Use simple template to avoid errors
+        return render_template('review_simple.html', receipt=receipt, jobs=jobs)
+    except Exception as e:
+        logger.error(f"Error in review_receipt: {str(e)}", exc_info=True)
+        # Return a simple error page instead of redirecting
+        return f"""
+        <html><body>
+        <h1>Error Loading Receipt</h1>
+        <p>Error: {str(e)}</p>
+        <p>Receipt ID: {receipt_id}</p>
+        <a href="/">Back to Home</a>
+        </body></html>
+        """, 500
 
 @app.route('/update_receipt/<int:receipt_id>', methods=['POST'])
 @login_required
