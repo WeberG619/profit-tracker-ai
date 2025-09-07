@@ -213,6 +213,44 @@ def init_db_emergency():
             'database_uri': app.config.get('SQLALCHEMY_DATABASE_URI', 'not set')[:50] + '...'
         }), 500
 
+@app.route('/migrate-db')
+def migrate_database():
+    """Run database migrations to add new columns"""
+    try:
+        from sqlalchemy import text
+        migrations_applied = []
+        
+        # Try to add receipt_hash column if it doesn't exist
+        try:
+            db.session.execute(text("SELECT receipt_hash FROM receipt LIMIT 1"))
+        except:
+            # Column doesn't exist, add it
+            db.session.execute(text("ALTER TABLE receipt ADD COLUMN receipt_hash VARCHAR(64)"))
+            db.session.commit()
+            migrations_applied.append("Added receipt_hash column to receipt table")
+        
+        # Add more migrations here as needed
+        
+        if migrations_applied:
+            return jsonify({
+                'status': 'success',
+                'message': 'Migrations applied successfully',
+                'migrations': migrations_applied
+            })
+        else:
+            return jsonify({
+                'status': 'success',
+                'message': 'No migrations needed',
+                'migrations': []
+            })
+            
+    except Exception as e:
+        logger.error(f"Migration error: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
+        }), 500
+
 @app.route('/debug-env')
 def debug_env():
     """Debug endpoint to check environment"""
@@ -439,31 +477,51 @@ def landing():
 @company_required
 def company_dashboard():
     """Company-specific dashboard showing stats and recent receipts"""
-    # Get company-specific stats
-    stats = {
-        'total_receipts': Receipt.query.filter_by(company_id=current_user.company_id).count(),
-        'total_expenses': db.session.query(db.func.sum(Receipt.total_amount)).filter_by(company_id=current_user.company_id).scalar() or 0,
-        'active_jobs': Job.query.filter_by(company_id=current_user.company_id, status='active').count(),
-        'month_expenses': 0  # We'll calculate this next
-    }
-    
-    # Calculate this month's expenses
-    from datetime import datetime
-    first_day_of_month = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    stats['month_expenses'] = db.session.query(db.func.sum(Receipt.total_amount)).filter(
-        Receipt.company_id == current_user.company_id,
-        Receipt.created_at >= first_day_of_month
-    ).scalar() or 0
-    
-    # Get recent receipts (last 10)
-    recent_receipts = Receipt.query.filter_by(company_id=current_user.company_id)\
-        .order_by(Receipt.created_at.desc())\
-        .limit(10)\
-        .all()
-    
-    return render_template('company_dashboard.html', 
-                         stats=stats, 
-                         recent_receipts=recent_receipts)
+    try:
+        # Get company-specific stats
+        stats = {
+            'total_receipts': Receipt.query.filter_by(company_id=current_user.company_id).count(),
+            'total_expenses': db.session.query(db.func.sum(Receipt.total_amount)).filter_by(company_id=current_user.company_id).scalar() or 0,
+            'active_jobs': Job.query.filter_by(company_id=current_user.company_id, status='active').count(),
+            'month_expenses': 0  # We'll calculate this next
+        }
+        
+        # Calculate this month's expenses
+        from datetime import datetime
+        first_day_of_month = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        stats['month_expenses'] = db.session.query(db.func.sum(Receipt.total_amount)).filter(
+            Receipt.company_id == current_user.company_id,
+            Receipt.created_at >= first_day_of_month
+        ).scalar() or 0
+        
+        # Get recent receipts (last 10)
+        recent_receipts = Receipt.query.filter_by(company_id=current_user.company_id)\
+            .order_by(Receipt.created_at.desc())\
+            .limit(10)\
+            .all()
+        
+        return render_template('company_dashboard.html', 
+                             stats=stats, 
+                             recent_receipts=recent_receipts)
+    except Exception as e:
+        logger.error(f"Dashboard error: {str(e)}", exc_info=True)
+        
+        # Try to auto-fix by adding missing columns
+        try:
+            from sqlalchemy import text
+            # Try to add receipt_hash column if missing
+            db.session.execute(text("ALTER TABLE receipt ADD COLUMN receipt_hash VARCHAR(64)"))
+            db.session.commit()
+            logger.info("Added missing receipt_hash column")
+            
+            # Retry the dashboard
+            return redirect(url_for('company_dashboard'))
+        except:
+            # Column might already exist or other error
+            pass
+        
+        flash('Error loading dashboard. Please try again.', 'error')
+        return redirect(url_for('upload_page'))
 
 @app.route('/upload')
 @login_required
