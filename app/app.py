@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, send_file, flash
 from flask_login import login_user, logout_user, login_required, current_user
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import joinedload
 from werkzeug.utils import secure_filename
 import os
 import io
@@ -93,6 +94,37 @@ def init_db():
                 db.session.add(job)
         
         db.session.commit()
+
+@app.route('/test-receipts')
+@login_required
+def test_receipts():
+    """Test route to debug receipts listing"""
+    try:
+        count = Receipt.query.filter_by(company_id=current_user.company_id).count()
+        receipts = Receipt.query.filter_by(company_id=current_user.company_id).limit(5).all()
+        
+        return jsonify({
+            'success': True,
+            'company_id': current_user.company_id,
+            'total_receipts': count,
+            'sample_receipts': [
+                {
+                    'id': r.id,
+                    'vendor_name': r.vendor_name,
+                    'total_amount': r.total_amount,
+                    'image_path': r.image_path,
+                    'has_job': bool(r.job_id),
+                    'job_number': r.job.job_number if r.job else None
+                } for r in receipts
+            ]
+        })
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'trace': traceback.format_exc()
+        }), 500
 
 @app.route('/health')
 def health_check():
@@ -761,8 +793,19 @@ def update_receipt(receipt_id):
 @login_required
 @company_required
 def list_receipts():
-    receipts = Receipt.query.filter_by(company_id=current_user.company_id).order_by(Receipt.created_at.desc()).all()
-    return render_template('list.html', receipts=receipts)
+    try:
+        # Eager load the job relationship to avoid N+1 queries
+        receipts = Receipt.query.filter_by(company_id=current_user.company_id)\
+            .options(joinedload(Receipt.job))\
+            .order_by(Receipt.created_at.desc())\
+            .all()
+        
+        logger.info(f"Loading receipts list for company {current_user.company_id}: {len(receipts)} receipts")
+        return render_template('list.html', receipts=receipts)
+    except Exception as e:
+        logger.error(f"Error in list_receipts: {str(e)}", exc_info=True)
+        flash('Error loading receipts. Please try again.', 'error')
+        return redirect(url_for('company_dashboard'))
 
 @app.route('/api/jobs')
 @login_required
