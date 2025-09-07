@@ -3,29 +3,38 @@
 ![Python](https://img.shields.io/badge/python-v3.9+-blue.svg)
 ![Flask](https://img.shields.io/badge/flask-v3.0+-green.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
-[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/WeberG619/profit-tracker-ai)
+![Status](https://img.shields.io/badge/status-live-success.svg)
+[![Deployed on Render](https://img.shields.io/badge/deployed%20on-Render-46E3B7.svg)](https://profit-tracker-ai.onrender.com)
 
-> Stop losing money on jobs. Built for plumbers, electricians, and trade professionals.
+> Stop losing money on jobs. AI-powered receipt tracking for trade professionals.
 
-## 🚀 Built in Sandpoint, Idaho for Local Trade Professionals
+## 🚀 Live Demo
 
-"After talking with local plumbers and electricians, I discovered they lose $2,000-5,000 monthly on underpriced jobs. This tool fixes that."
+**Try it now:** [profit-tracker-ai.onrender.com](https://profit-tracker-ai.onrender.com)
+- Username: `admin`
+- Password: `admin123`
 
-## 📺 Demo Video
+## 💼 The Problem It Solves
 
-[Video Placeholder - Coming Soon]
+Local trade professionals (plumbers, electricians, contractors) lose $2,000-5,000 monthly on underpriced jobs because they don't track material costs accurately. This tool uses AI to instantly extract receipt data and track profit margins in real-time.
 
 ## ✨ Features
 
-- 📱 **SMS Receipt Upload** - Text photos to track expenses instantly
-- 🤖 **AI-Powered Extraction** - Automatic vendor, amount, and line item detection
-- 📊 **Real-Time Profit Tracking** - Know your margins before it's too late
-- 🎯 **Smart Pattern Detection** - Identify which job types lose money
-- 💡 **Price Recommendations** - AI suggests profitable pricing based on history
-- 📥 **QuickBooks Export** - Seamless accounting integration
-- 🔐 **Multi-Company Support** - Secure data isolation for crews
-- 📲 **Mobile-First Design** - Built for job sites, not offices
+### Working Now
+- ✅ **PDF & Image Upload** - Drag-and-drop receipts in any format
+- ✅ **AI Receipt Processing** - Claude 3.5 extracts vendor, total, date, line items
+- ✅ **Job Assignment** - Link receipts to specific jobs
+- ✅ **Professional Interface** - Clean, modern design with image preview
+- ✅ **Multi-User Support** - Company-based data isolation
+- ✅ **PostgreSQL Database** - Reliable data persistence
+
+### Coming Soon
+- 📱 **SMS Receipt Upload** - Text photos to track expenses
+- 📊 **Profit Analytics** - Real-time margin tracking per job
+- 💡 **Price Recommendations** - AI-suggested pricing based on history
+- 📥 **Export Features** - CSV, PDF, QuickBooks integration
+- 🎯 **Pattern Detection** - Identify money-losing job types
+- 📧 **Email Reports** - Weekly profit/loss summaries
 
 ## 🚀 Quick Start
 
@@ -98,21 +107,13 @@ python app/app.py
 - **Frontend**: Tailwind CSS, Chart.js
 - **Deployment**: Render, Heroku, Docker
 
-## 📸 Screenshots
+## 📸 How It Works
 
-<details>
-<summary>Click to view screenshots</summary>
-
-### Dashboard
-![Dashboard](docs/images/dashboard-placeholder.png)
-
-### SMS Upload
-![SMS Upload](docs/images/sms-placeholder.png)
-
-### Profit Insights
-![Insights](docs/images/insights-placeholder.png)
-
-</details>
+1. **Upload Receipt** - Drag & drop PDF or image
+2. **AI Processes** - Claude extracts all data automatically
+3. **Review & Edit** - Verify extracted information
+4. **Assign to Job** - Link to specific customer job
+5. **Track Profits** - Monitor margins in real-time
 
 ## 🔧 Installation
 
