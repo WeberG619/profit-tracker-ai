@@ -123,55 +123,110 @@ DASHBOARD_HTML = '''
 <head>
     <title>Dashboard - Profit Tracker AI</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }
-        .header { background: white; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .header h1 { margin: 0; color: #333; }
-        .container { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
-        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin: 20px 0; }
-        .stat-card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center; }
-        .stat-card h3 { margin: 0 0 10px 0; color: #666; font-size: 14px; text-transform: uppercase; }
-        .stat-card .value { font-size: 36px; font-weight: bold; color: #333; }
-        .btn { display: inline-block; padding: 10px 20px; margin: 5px; background: #007bff; color: white; text-decoration: none; border-radius: 5px; }
-        .btn:hover { background: #0056b3; }
-        .logout { float: right; background: #dc3545; }
-        .logout:hover { background: #c82333; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background: #f0f2f5; }
+        .navbar { background: #1a1a1a; color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .navbar h1 { margin: 0; font-size: 1.5rem; font-weight: 600; }
+        .navbar .user-info { display: flex; align-items: center; gap: 1rem; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
+        .welcome-section { background: white; padding: 2rem; border-radius: 12px; margin-bottom: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .welcome-section h2 { margin: 0 0 1rem 0; font-size: 1.875rem; color: #111; }
+        .action-buttons { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1.5rem; }
+        .btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.5rem; font-size: 1rem; font-weight: 500; text-decoration: none; border-radius: 8px; transition: all 0.2s; }
+        .btn-primary { background: #2563eb; color: white; }
+        .btn-primary:hover { background: #1d4ed8; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(37,99,235,0.2); }
+        .btn-success { background: #10b981; color: white; }
+        .btn-success:hover { background: #059669; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16,185,129,0.2); }
+        .btn-warning { background: #f59e0b; color: white; }
+        .btn-warning:hover { background: #d97706; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(245,158,11,0.2); }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-danger:hover { background: #dc2626; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        .stat-card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: all 0.3s; }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .stat-card .icon { width: 48px; height: 48px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem; }
+        .stat-card h3 { margin: 0 0 0.5rem 0; font-size: 0.875rem; font-weight: 500; color: #6b7280; text-transform: uppercase; letter-spacing: 0.025em; }
+        .stat-card .value { font-size: 2.25rem; font-weight: 700; color: #111; margin: 0; }
+        .stat-card .change { font-size: 0.875rem; margin-top: 0.5rem; }
+        .positive { color: #10b981; }
+        .negative { color: #ef4444; }
+        .recent-activity { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .recent-activity h3 { margin: 0 0 1.5rem 0; font-size: 1.25rem; font-weight: 600; }
+        .activity-list { list-style: none; padding: 0; margin: 0; }
+        .activity-item { padding: 1rem 0; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 1rem; }
+        .activity-item:last-child { border-bottom: none; }
+        .activity-icon { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; }
+        .activity-details { flex: 1; }
+        .activity-time { color: #6b7280; font-size: 0.875rem; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <a href="/logout" class="btn logout">Logout</a>
-        <h1>Welcome, {{ username }}!</h1>
+    <div class="navbar">
+        <h1>📊 Profit Tracker AI</h1>
+        <div class="user-info">
+            <span>{{ username }}</span>
+            <a href="/logout" class="btn btn-danger">Logout</a>
+        </div>
     </div>
     
     <div class="container">
-        <div style="background: white; padding: 20px; border-radius: 10px; margin: 20px 0;">
-            <h2>Quick Actions</h2>
-            <a href="/upload" class="btn">📸 Upload Receipt</a>
-            <a href="/receipts" class="btn" style="background: #28a745;">📋 View Receipts</a>
-            <a href="/invoices" class="btn" style="background: #ffc107; color: #333;">💰 Invoices</a>
+        <div class="welcome-section">
+            <h2>Welcome back, {{ username }}!</h2>
+            <p style="color: #6b7280; margin: 0;">Track your expenses and income to maximize profits.</p>
+            
+            <div class="action-buttons">
+                <a href="/upload" class="btn btn-primary">
+                    <span>📸</span> Upload Receipt
+                </a>
+                <a href="/receipts" class="btn btn-success">
+                    <span>📋</span> View Receipts
+                </a>
+                <a href="/invoices" class="btn btn-warning">
+                    <span>💰</span> Manage Invoices
+                </a>
+            </div>
         </div>
         
-        <div class="stats">
+        <div class="stats-grid">
             <div class="stat-card">
-                <h3>Total Receipts</h3>
-                <div class="value">0</div>
+                <div class="icon" style="background: #dbeafe; color: #2563eb;">📄</div>
+                <h3>Total Documents</h3>
+                <p class="value">0</p>
+                <p class="change positive">+0% from last month</p>
             </div>
+            
             <div class="stat-card">
+                <div class="icon" style="background: #fee2e2; color: #ef4444;">💸</div>
                 <h3>Total Expenses</h3>
-                <div class="value" style="color: #dc3545;">$0</div>
+                <p class="value">$0.00</p>
+                <p class="change negative">+0% from last month</p>
             </div>
+            
             <div class="stat-card">
+                <div class="icon" style="background: #d1fae5; color: #10b981;">💵</div>
                 <h3>Total Income</h3>
-                <div class="value" style="color: #28a745;">$0</div>
+                <p class="value">$0.00</p>
+                <p class="change positive">+0% from last month</p>
             </div>
+            
             <div class="stat-card">
+                <div class="icon" style="background: #e0e7ff; color: #6366f1;">📈</div>
                 <h3>Net Profit</h3>
-                <div class="value">$0</div>
+                <p class="value">$0.00</p>
+                <p class="change positive">+0% margin</p>
             </div>
         </div>
         
-        <div style="background: white; padding: 20px; border-radius: 10px; text-align: center;">
-            <p>🎉 Your Profit Tracker AI is ready! Start by uploading your first receipt.</p>
+        <div class="recent-activity">
+            <h3>Recent Activity</h3>
+            <ul class="activity-list">
+                <li class="activity-item">
+                    <div class="activity-icon" style="background: #f3f4f6; color: #6b7280;">🎉</div>
+                    <div class="activity-details">
+                        <div>Welcome to Profit Tracker AI!</div>
+                        <div class="activity-time">Get started by uploading your first receipt</div>
+                    </div>
+                </li>
+            </ul>
         </div>
     </div>
 </body>
@@ -211,9 +266,70 @@ def logout():
     session.clear()
     return redirect(url_for('index'))
 
-@app.route('/register')
+REGISTER_HTML = '''
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Register - Profit Tracker AI</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f5f5f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .register-box { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        h2 { text-align: center; color: #333; margin-bottom: 30px; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; }
+        button:hover { background: #218838; }
+        .error { color: #dc3545; text-align: center; margin: 10px 0; }
+        .success { color: #28a745; text-align: center; margin: 10px 0; }
+        a { color: #007bff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="register-box">
+        <h2>🚀 Create Account</h2>
+        {% if error %}
+        <div class="error">{{ error }}</div>
+        {% endif %}
+        {% if success %}
+        <div class="success">{{ success }}</div>
+        {% endif %}
+        <form method="POST">
+            <input type="text" name="username" placeholder="Username" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <input type="password" name="confirm_password" placeholder="Confirm Password" required>
+            <button type="submit">Create Account</button>
+        </form>
+        <div style="text-align: center; margin-top: 20px;">
+            <a href="/">← Back</a> | <a href="/login">Already have an account?</a>
+        </div>
+    </div>
+</body>
+</html>
+'''
+
+@app.route('/register', methods=['GET', 'POST'])
 def register():
-    return '<h1>Registration coming soon!</h1><p><a href="/">Back to home</a></p>'
+    error = None
+    success = None
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+        
+        if password != confirm_password:
+            error = 'Passwords do not match'
+        else:
+            existing_user = User.query.filter_by(username=username).first()
+            if existing_user:
+                error = 'Username already exists'
+            else:
+                user = User(username=username)
+                user.set_password(password)
+                db.session.add(user)
+                db.session.commit()
+                success = 'Account created! You can now login.'
+    
+    return render_template_string(REGISTER_HTML, error=error, success=success)
 
 @app.route('/upload')
 def upload():
