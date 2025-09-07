@@ -80,30 +80,48 @@ def process_receipt_image(image_path):
         Be as accurate as possible. If any field is not visible or unclear, use null.
         For dates, convert to YYYY-MM-DD format. For amounts, extract numeric values only."""
         
-        # Send request to Claude
-        message = client.messages.create(
-            model="claude-3-haiku-20240307",
-            max_tokens=1000,
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
+        # Send request to Claude with fallback models
+        models_to_try = [
+            "claude-3-5-sonnet-20241022",  # Latest model
+            "claude-3-5-sonnet-20240620",  # Previous version
+            "claude-3-sonnet-20240229"     # Older fallback
+        ]
+        
+        last_error = None
+        for model in models_to_try:
+            try:
+                message = client.messages.create(
+                    model=model,
+                    max_tokens=1000,
+                    messages=[
                         {
-                            "type": "text",
-                            "text": prompt
-                        },
-                        {
-                            "type": "image",
-                            "source": {
-                                "type": "base64",
-                                "media_type": "image/png" if image_to_process.endswith('.png') else "image/jpeg",
-                                "data": base64_image
-                            }
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": prompt
+                                },
+                                {
+                                    "type": "image",
+                                    "source": {
+                                        "type": "base64",
+                                        "media_type": "image/png" if image_to_process.endswith('.png') else "image/jpeg",
+                                        "data": base64_image
+                                    }
+                                }
+                            ]
                         }
                     ]
-                }
-            ]
-        )
+                )
+                logger.info(f"Successfully used model: {model}")
+                break
+            except Exception as e:
+                last_error = e
+                logger.warning(f"Model {model} failed: {str(e)}")
+                continue
+        else:
+            # All models failed
+            raise last_error or Exception("All models failed")
         
         # Extract JSON from response
         response_text = message.content[0].text
