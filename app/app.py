@@ -187,10 +187,13 @@ def debug_env():
     if not (app.debug or request.args.get('secret') == 'check-env-2024'):
         return jsonify({'error': 'Not available'}), 403
     
+    api_key = os.getenv('ANTHROPIC_API_KEY')
     return jsonify({
         'upload_folder': app.config.get('UPLOAD_FOLDER'),
         'upload_folder_exists': os.path.exists(app.config.get('UPLOAD_FOLDER', '')),
-        'anthropic_key_set': bool(os.getenv('ANTHROPIC_API_KEY')),
+        'anthropic_key_set': bool(api_key),
+        'anthropic_key_format': f"sk-ant-...{api_key[-4:]}" if api_key and len(api_key) > 10 else "Not set",
+        'anthropic_key_length': len(api_key) if api_key else 0,
         'database_connected': bool(os.environ.get('DATABASE_URL')),
         'render_env': bool(os.environ.get('RENDER')),
         'allowed_extensions': list(app.config.get('ALLOWED_EXTENSIONS', [])),
