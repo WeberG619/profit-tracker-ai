@@ -439,60 +439,10 @@ def uploaded_file(filename):
 
 @app.route('/')
 def landing():
-    """Landing page for non-logged in users, company dashboard for logged in"""
-    # Don't check authentication for now - just show landing page
-    return '''
-    <html>
-    <head>
-        <title>Profit Tracker AI</title>
-        <style>
-            body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
-            .hero { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 100px 20px; text-align: center; }
-            .container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
-            .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin: 40px 0; }
-            .feature { background: #f7f7f7; padding: 30px; border-radius: 10px; }
-            .cta { background: #4CAF50; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px; }
-            .cta:hover { background: #45a049; }
-        </style>
-    </head>
-    <body>
-        <div class="hero">
-            <h1>🚀 Profit Tracker AI</h1>
-            <p style="font-size: 1.5em;">Stop losing money on jobs. AI-powered receipt tracking for contractors.</p>
-            <a href="/login" class="cta">Login</a>
-            <a href="/register" class="cta">Start Free Trial</a>
-        </div>
-        
-        <div class="container">
-            <h2>Track Every Dollar. Maximize Every Profit.</h2>
-            
-            <div class="features">
-                <div class="feature">
-                    <h3>📸 Snap & Track</h3>
-                    <p>Take a photo of any receipt. Our AI extracts vendor, amount, and date instantly.</p>
-                </div>
-                <div class="feature">
-                    <h3>📊 Job Profitability</h3>
-                    <p>See real-time profit margins for every job. Know exactly where you make money.</p>
-                </div>
-                <div class="feature">
-                    <h3>💰 Invoice Management</h3>
-                    <p>Track both expenses AND income. Know what's owed to you at a glance.</p>
-                </div>
-            </div>
-            
-            <div style="text-align: center; margin-top: 50px;">
-                <p>Built specifically for plumbers, electricians, and contractors who want to stop leaving money on the table.</p>
-                <a href="/register" class="cta">Start Your Free Trial</a>
-            </div>
-        </div>
-        
-        <div style="background: #f0f0f0; padding: 20px; text-align: center;">
-            <p>Need help? <a href="/health">System Status</a> | <a href="mailto:support@profittrackerai.com">Contact Support</a></p>
-        </div>
-    </body>
-    </html>
-    '''
+    """Landing page for non-logged in users, redirect to dashboard for logged in"""
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    return render_template('landing.html')
 
 @app.route('/test')
 def test_route():
@@ -536,65 +486,46 @@ def health_status():
 
 @app.route('/dashboard')
 @login_required
-def dashboard_simple():
-    """Simple dashboard without company requirement"""
-    return f'''
-    <html>
-    <head>
-        <title>Dashboard - Profit Tracker AI</title>
-        <style>
-            body {{ font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }}
-            .container {{ max-width: 1200px; margin: 0 auto; }}
-            .header {{ background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }}
-            .card {{ background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; }}
-            .stats {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }}
-            .stat-card {{ background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; }}
-            .stat-card h3 {{ margin: 0; color: #666; font-size: 14px; }}
-            .stat-card p {{ margin: 10px 0 0 0; font-size: 32px; font-weight: bold; }}
-            .btn {{ background: #667eea; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; }}
-            .btn:hover {{ background: #5a67d8; }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="header">
-                <h1>Welcome, {current_user.username}!</h1>
-                <a href="/logout" class="btn">Logout</a>
-            </div>
+def dashboard():
+    """Professional dashboard with stats"""
+    # Calculate stats for the user's company
+    company_id = getattr(current_user, 'company_id', None)
+    
+    # Initialize stats with default values
+    stats = {
+        'total_jobs': 0,
+        'jobs_over_budget': 0,
+        'avg_profit_margin': 0,
+        'total_revenue': 0,
+        'total_expenses': 0,
+        'total_profit': 0,
+        'recent_receipts': [],
+        'recent_jobs': []
+    }
+    
+    try:
+        # Get total receipts and expenses
+        if company_id:
+            receipts = Receipt.query.filter_by(company_id=company_id).all()
+            stats['total_expenses'] = sum(r.total_amount or 0 for r in receipts if r.direction == 'expense')
+            stats['total_revenue'] = sum(r.total_amount or 0 for r in receipts if r.direction == 'income')
+            stats['total_profit'] = stats['total_revenue'] - stats['total_expenses']
             
-            <div class="card">
-                <h2>Quick Actions</h2>
-                <a href="/upload" class="btn">Upload Receipt/Invoice</a>
-                <a href="/list" class="btn" style="background: #48bb78; margin-left: 10px;">View All Documents</a>
-                <a href="/accounts-receivable" class="btn" style="background: #ed8936; margin-left: 10px;">Accounts Receivable</a>
-            </div>
+            # Get recent receipts
+            stats['recent_receipts'] = Receipt.query.filter_by(company_id=company_id)\
+                .order_by(Receipt.created_at.desc())\
+                .limit(5).all()
             
-            <div class="stats">
-                <div class="stat-card">
-                    <h3>Total Documents</h3>
-                    <p>Loading...</p>
-                </div>
-                <div class="stat-card">
-                    <h3>Total Expenses</h3>
-                    <p style="color: #e53e3e;">Loading...</p>
-                </div>
-                <div class="stat-card">
-                    <h3>Total Income</h3>
-                    <p style="color: #48bb78;">Loading...</p>
-                </div>
-                <div class="stat-card">
-                    <h3>Net Profit</h3>
-                    <p>Loading...</p>
-                </div>
-            </div>
-            
-            <div class="card">
-                <p>Your Profit Tracker AI system is ready to use! Start by uploading your first receipt or invoice.</p>
-            </div>
-        </div>
-    </body>
-    </html>
-    '''
+            # Get jobs if they exist
+            jobs = Job.query.filter_by(company_id=company_id).all()
+            stats['total_jobs'] = len(jobs)
+            stats['recent_jobs'] = Job.query.filter_by(company_id=company_id)\
+                .order_by(Job.created_at.desc())\
+                .limit(5).all()
+    except Exception as e:
+        app.logger.error(f"Error calculating stats: {str(e)}")
+    
+    return render_template('dashboard.html', stats=stats)
 
 @app.route('/dashboard-full')
 @login_required
