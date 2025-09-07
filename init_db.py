@@ -1,67 +1,85 @@
 #!/usr/bin/env python
 """
-Initialize database for Profit Tracker AI
+Initialize database - run this manually if tables aren't created
 """
-
 import os
 import sys
 
-# Add the app directory to the Python path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Force PostgreSQL
+database_url = os.environ.get('DATABASE_URL')
+if database_url:
+    print(f"Found DATABASE_URL: {database_url[:30]}...")
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+        os.environ['DATABASE_URL'] = database_url
+        print("Fixed postgres:// to postgresql://")
 
-from app.models import db, Company, User, Job
-from app.app import app
+# Import after setting environment
+from app.app import app, db
+from app.models import Company, User, Receipt, Job, LineItem
 
 def init_database():
-    """Initialize database with tables and demo data"""
+    """Initialize the database with all tables"""
     with app.app_context():
-        # Create all tables
-        db.create_all()
-        print("✓ Database tables created")
+        print(f"Database URI: {app.config.get('SQLALCHEMY_DATABASE_URI', 'NOT SET')[:50]}...")
         
-        # Check if demo company exists
-        demo_company = Company.query.filter_by(name='Demo Company').first()
-        if not demo_company:
-            # Create demo company
-            demo_company = Company(
-                name='Demo Company',
-                phone_number='+1234567890'
-            )
-            db.session.add(demo_company)
-            db.session.commit()
-            print("✓ Demo company created")
+        # Drop all tables first (careful in production!)
+        print("Dropping existing tables...")
+        db.drop_all()
+        
+        # Create all tables
+        print("Creating tables...")
+        db.create_all()
+        
+        # Verify tables were created
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
+        
+        print(f"\nCreated tables: {tables}")
+        
+        # Create test data
+        if not User.query.first():
+            print("\nCreating test company and user...")
             
-            # Create demo user
-            demo_user = User(
-                username='demo',
-                email='demo@example.com',
-                company_id=demo_company.id,
+            # Create test company
+            company = Company(
+                name="Test Company",
+                phone_number="+1234567890"
+            )
+            db.session.add(company)
+            db.session.commit()
+            
+            # Create test user
+            user = User(
+                username="admin",
+                email="admin@example.com",
+                company_id=company.id,
                 is_admin=True
             )
-            demo_user.set_password('demo123')
-            db.session.add(demo_user)
-            db.session.commit()
-            print("✓ Demo user created (username: demo, password: demo123)")
+            user.set_password("admin123")
+            db.session.add(user)
             
-            # Create some demo jobs
-            demo_jobs = [
-                {'job_number': 'JOB001', 'customer_name': 'Smith Residence', 'job_type': 'plumbing', 'revenue': 500},
-                {'job_number': 'JOB002', 'customer_name': 'Johnson Office', 'job_type': 'electrical', 'revenue': 750},
-                {'job_number': 'JOB003', 'customer_name': 'Brown Kitchen', 'job_type': 'renovation', 'revenue': 1200}
-            ]
-            
-            for job_data in demo_jobs:
-                job = Job(
-                    company_id=demo_company.id,
-                    **job_data,
-                    status='active'
-                )
-                db.session.add(job)
+            # Create test job
+            job = Job(
+                job_number="1001",
+                customer_name="Test Customer",
+                quoted_price=1000.00,
+                company_id=company.id
+            )
+            db.session.add(job)
             
             db.session.commit()
-            print("✓ Demo jobs created")
-        else:
-            print("✓ Demo data already exists")
+            print("✅ Test data created (username: admin, password: admin123)")
+        
+        return True
 
-if __name__ == '__main__':
-    init_database()
+if __name__ == "__main__":
+    try:
+        init_database()
+        print("\n✅ Database initialization complete!")
+    except Exception as e:
+        print(f"\n❌ Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
