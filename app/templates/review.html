@@ -1,15 +1,26 @@
 {% extends "base.html" %}
 
-{% block title %}Review Receipt - Receipt Processor{% endblock %}
+{% block title %}Review {{ 'Invoice' if receipt.document_type == 'invoice' else 'Receipt' }} - Profit Tracker AI{% endblock %}
 
 {% block content %}
 <div class="max-w-4xl mx-auto">
-    <h2 class="text-2xl md:text-3xl font-bold mb-6 text-gray-800">Review & Edit Receipt</h2>
+    <h2 class="text-2xl md:text-3xl font-bold mb-6 text-gray-800">
+        Review & Edit {{ 'Invoice' if receipt.document_type == 'invoice' else 'Receipt' }}
+        {% if receipt.document_type == 'invoice' %}
+            <span class="text-green-600 text-lg ml-2">
+                <i class="fas fa-arrow-circle-down"></i> Money In
+            </span>
+        {% else %}
+            <span class="text-red-600 text-lg ml-2">
+                <i class="fas fa-arrow-circle-up"></i> Money Out
+            </span>
+        {% endif %}
+    </h2>
     
     <div class="grid md:grid-cols-2 gap-6">
         <!-- Image Preview -->
         <div class="bg-white p-6 rounded-lg shadow-md">
-            <h3 class="text-xl font-semibold mb-4">Receipt Image</h3>
+            <h3 class="text-xl font-semibold mb-4">{{ 'Invoice' if receipt.document_type == 'invoice' else 'Receipt' }} Image</h3>
             <img src="/uploads/{{ receipt.image_path }}" 
                  alt="Receipt" 
                  class="w-full h-auto rounded-lg shadow-md cursor-pointer"
@@ -22,12 +33,14 @@
             <h3 class="text-xl font-semibold mb-4">Receipt Details</h3>
             
             <form id="reviewForm">
-                <!-- Vendor -->
+                <!-- Vendor/Customer -->
                 <div class="mb-4">
-                    <label class="block text-gray-700 font-bold mb-2">Vendor/Store</label>
+                    <label class="block text-gray-700 font-bold mb-2">
+                        {{ 'Customer' if receipt.document_type == 'invoice' else 'Vendor/Store' }}
+                    </label>
                     <input type="text" 
                            id="vendor" 
-                           value="{{ receipt.vendor_name or '' }}"
+                           value="{{ receipt.customer_name if receipt.document_type == 'invoice' else receipt.vendor_name or '' }}"
                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-blue-500 mobile-large">
                 </div>
                 

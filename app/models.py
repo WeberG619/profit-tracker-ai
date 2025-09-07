@@ -33,6 +33,9 @@ class User(db.Model, UserMixin):
         return check_password_hash(self.password_hash, password)
 
 class Receipt(db.Model):
+    # Note: Keeping table name as 'receipt' for backward compatibility
+    # But this now handles both receipts and invoices
+    
     id = db.Column(db.Integer, primary_key=True)
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
     image_path = db.Column(db.String(500), nullable=False)
@@ -48,9 +51,52 @@ class Receipt(db.Model):
     receipt_hash = db.Column(db.String(64))  # MD5 hash for quick duplicate checking
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
+    # New fields for invoice support
+    document_type = db.Column(db.String(50), default='receipt')  # receipt/invoice/quote
+    direction = db.Column(db.String(20), default='expense')  # expense/income
+    status = db.Column(db.String(20), default='paid')  # paid/pending/overdue/draft
+    
+    # Invoice-specific fields
+    due_date = db.Column(db.Date)
+    customer_name = db.Column(db.String(255))
+    customer_email = db.Column(db.String(255))
+    customer_phone = db.Column(db.String(50))
+    invoice_number = db.Column(db.String(100))
+    
+    # Payment tracking
+    sent_date = db.Column(db.DateTime)
+    paid_date = db.Column(db.DateTime)
+    payment_method = db.Column(db.String(50))
+    
+    # Additional fields
+    terms = db.Column(db.Text)  # Payment terms
+    notes = db.Column(db.Text)  # Internal notes
+    
     # Relationships
     line_items = db.relationship('LineItem', backref='receipt', lazy=True, cascade='all, delete-orphan')
     job = db.relationship('Job', backref='receipts')
+    
+    @property
+    def is_overdue(self):
+        """Check if an invoice is overdue"""
+        if self.document_type == 'invoice' and self.status == 'pending' and self.due_date:
+            return self.due_date < datetime.now().date()
+        return False
+    
+    @property
+    def days_overdue(self):
+        """Calculate how many days overdue an invoice is"""
+        if self.is_overdue:
+            return (datetime.now().date() - self.due_date).days
+        return 0
+    
+    @property
+    def display_name(self):
+        """Get appropriate name for display"""
+        if self.document_type == 'invoice':
+            return self.customer_name or 'Unknown Customer'
+        else:
+            return self.vendor_name or 'Unknown Vendor'
 
 class Job(db.Model):
     id = db.Column(db.Integer, primary_key=True)

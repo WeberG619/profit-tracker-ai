@@ -6,7 +6,7 @@ from werkzeug.utils import secure_filename
 import os
 import io
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 from .models import db, Receipt, Job, LineItem, Company, User
 from .config import Config
@@ -480,6 +480,7 @@ def company_dashboard():
     stats = {
         'total_receipts': 0,
         'total_expenses': 0,
+        'total_income': 0,
         'active_jobs': 0,
         'month_expenses': 0
     }
@@ -492,9 +493,23 @@ def company_dashboard():
         pass
         
     try:
-        # Get total expenses
-        total = db.session.query(db.func.sum(Receipt.total_amount)).filter_by(company_id=current_user.company_id).scalar()
-        stats['total_expenses'] = total or 0
+        # Get total expenses (receipts)
+        total_expenses = db.session.query(db.func.sum(Receipt.total_amount)).filter_by(
+            company_id=current_user.company_id,
+            document_type='receipt'
+        ).scalar()
+        stats['total_expenses'] = total_expenses or 0
+    except:
+        pass
+        
+    try:
+        # Get total income (paid invoices)
+        total_income = db.session.query(db.func.sum(Receipt.total_amount)).filter_by(
+            company_id=current_user.company_id,
+            document_type='invoice',
+            status='paid'
+        ).scalar()
+        stats['total_income'] = total_income or 0
     except:
         pass
         
@@ -527,6 +542,144 @@ def company_dashboard():
     return render_template('company_dashboard.html', 
                          stats=stats, 
                          recent_receipts=recent_receipts)
+
+@app.route('/accounts-receivable')
+@login_required
+@company_required
+def accounts_receivable():
+    """Dashboard for tracking unpaid invoices and accounts receivable"""
+    try:
+        # Get all invoices for this company
+        invoices = Receipt.query.filter_by(
+            company_id=current_user.company_id,
+            document_type='invoice'
+        ).all()
+        
+        # Calculate statistics
+        total_outstanding = 0
+        total_overdue = 0
+        overdue_invoices = []
+        pending_invoices = []
+        
+        for invoice in invoices:
+            if invoice.status == 'pending':
+                total_outstanding += invoice.total_amount or 0
+                pending_invoices.append(invoice)
+                if invoice.is_overdue:
+                    total_overdue += invoice.total_amount or 0
+                    overdue_invoices.append(invoice)
+        
+        # Sort overdue invoices by days overdue
+        overdue_invoices.sort(key=lambda x: x.days_overdue, reverse=True)
+        
+        # Get invoices due this week
+        today = datetime.now().date()
+        week_end = today + timedelta(days=7)
+        due_this_week = []
+        due_this_week_total = 0
+        
+        for invoice in pending_invoices:
+            if invoice.due_date and today <= invoice.due_date <= week_end:
+                due_this_week.append(invoice)
+                due_this_week_total += invoice.total_amount or 0
+        
+        # Calculate collection rate (paid / (paid + pending))
+        paid_total = db.session.query(db.func.sum(Receipt.total_amount)).filter_by(
+            company_id=current_user.company_id,
+            document_type='invoice',
+            status='paid'
+        ).scalar() or 0
+        
+        total_invoiced = paid_total + total_outstanding
+        collection_rate = int((paid_total / total_invoiced * 100) if total_invoiced > 0 else 0)
+        
+        return render_template('accounts_receivable.html',
+                             outstanding_total=total_outstanding,
+                             overdue_total=total_overdue,
+                             due_this_week=due_this_week_total,
+                             collection_rate=collection_rate,
+                             overdue_invoices=overdue_invoices,
+                             pending_invoices=pending_invoices,
+                             due_this_week_list=due_this_week)
+        
+    except Exception as e:
+        logger.error(f"Error in accounts receivable: {str(e)}")
+        return render_template('accounts_receivable.html',
+                             outstanding_total=0,
+                             overdue_total=0,
+                             due_this_week=0,
+                             collection_rate=0,
+                             overdue_invoices=[],
+                             pending_invoices=[],
+                             due_this_week_list=[])
+
+@app.route('/api/invoice/<int:invoice_id>/mark-paid', methods=['POST'])
+@login_required
+@company_required
+def mark_invoice_paid(invoice_id):
+    """Mark an invoice as paid"""
+    try:
+        invoice = Receipt.query.filter_by(
+            id=invoice_id,
+            company_id=current_user.company_id,
+            document_type='invoice'
+        ).first()
+        
+        if not invoice:
+            return jsonify({'error': 'Invoice not found'}), 404
+        
+        invoice.status = 'paid'
+        invoice.paid_date = datetime.now()
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Invoice marked as paid'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error marking invoice as paid: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/invoice/<int:invoice_id>/send-reminder', methods=['POST'])
+@login_required
+@company_required
+def send_invoice_reminder(invoice_id):
+    """Send a payment reminder for an invoice"""
+    try:
+        invoice = Receipt.query.filter_by(
+            id=invoice_id,
+            company_id=current_user.company_id,
+            document_type='invoice'
+        ).first()
+        
+        if not invoice:
+            return jsonify({'error': 'Invoice not found'}), 404
+        
+        # For now, just log the reminder
+        # In a real implementation, this would send email/SMS
+        reminder_note = f"Payment reminder sent on {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+        
+        if invoice.notes:
+            invoice.notes = invoice.notes + '\n' + reminder_note
+        else:
+            invoice.notes = reminder_note
+            
+        db.session.commit()
+        
+        # In production, you would:
+        # 1. Send email to invoice.customer_email
+        # 2. Send SMS to invoice.customer_phone
+        # 3. Track reminder history
+        
+        return jsonify({
+            'success': True,
+            'message': 'Reminder sent successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error sending reminder: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/upload')
 @login_required
@@ -684,10 +837,14 @@ def upload_file():
             file.save(filepath)
             
             # Create receipt record
+            document_type = request.form.get('document_type', 'receipt')
             receipt = Receipt(
                 company_id=current_user.company_id,
                 image_path=filename,
-                uploaded_by=request.form.get('uploaded_by', current_user.username)
+                uploaded_by=request.form.get('uploaded_by', current_user.username),
+                document_type=document_type,
+                direction='income' if document_type == 'invoice' else 'expense',
+                status='pending' if document_type == 'invoice' else 'paid'
             )
             db.session.add(receipt)
             db.session.commit()

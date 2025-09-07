@@ -1,10 +1,36 @@
 {% extends "base.html" %}
 
-{% block title %}Upload Receipt - Receipt Processor{% endblock %}
+{% block title %}Upload Document - Profit Tracker AI{% endblock %}
 
 {% block content %}
 <div class="max-w-2xl mx-auto">
-    <h2 class="text-2xl md:text-3xl font-bold mb-6 text-gray-800">Upload Receipt/Invoice</h2>
+    <h2 class="text-2xl md:text-3xl font-bold mb-6 text-gray-800">Upload Receipt or Invoice</h2>
+    
+    <!-- Document Type Selection -->
+    <div class="mb-6 bg-white p-6 rounded-lg shadow-md">
+        <label class="block text-gray-700 text-lg font-bold mb-4">
+            What are you uploading?
+        </label>
+        <div class="grid grid-cols-2 gap-4">
+            <button type="button" 
+                    id="typeReceipt" 
+                    onclick="selectDocumentType('receipt')"
+                    class="document-type-btn border-2 border-gray-300 rounded-lg p-4 hover:border-blue-500 transition-all">
+                <i class="fas fa-receipt text-4xl text-red-500 mb-2"></i>
+                <h4 class="font-semibold">Receipt</h4>
+                <p class="text-sm text-gray-600">Money you spent</p>
+            </button>
+            <button type="button" 
+                    id="typeInvoice" 
+                    onclick="selectDocumentType('invoice')"
+                    class="document-type-btn border-2 border-gray-300 rounded-lg p-4 hover:border-blue-500 transition-all">
+                <i class="fas fa-file-invoice-dollar text-4xl text-green-500 mb-2"></i>
+                <h4 class="font-semibold">Invoice</h4>
+                <p class="text-sm text-gray-600">Money owed to you</p>
+            </button>
+        </div>
+        <input type="hidden" id="documentType" name="documentType" value="receipt">
+    </div>
     
     <form id="uploadForm" class="bg-white p-6 rounded-lg shadow-md">
         <!-- Hidden field for preselected job -->
@@ -188,6 +214,7 @@
         const formData = new FormData();
         formData.append('file', selectedFile);
         formData.append('uploaded_by', document.getElementById('uploaded_by').value || 'Anonymous');
+        formData.append('document_type', document.getElementById('documentType').value);
         
         uploadBtn.disabled = true;
         loading.classList.remove('hidden');
@@ -268,5 +295,35 @@
             loading.classList.add('hidden');
         }
     });
+    
+    // Document type selection
+    let selectedDocumentType = 'receipt';
+    
+    function selectDocumentType(type) {
+        selectedDocumentType = type;
+        document.getElementById('documentType').value = type;
+        
+        // Update button states
+        document.querySelectorAll('.document-type-btn').forEach(btn => {
+            btn.classList.remove('border-blue-500', 'bg-blue-50');
+            btn.classList.add('border-gray-300');
+        });
+        
+        // Highlight selected button
+        const selectedBtn = document.getElementById('type' + type.charAt(0).toUpperCase() + type.slice(1));
+        selectedBtn.classList.remove('border-gray-300');
+        selectedBtn.classList.add('border-blue-500', 'bg-blue-50');
+        
+        // Update upload button text
+        const uploadBtn = document.getElementById('uploadBtn');
+        if (type === 'invoice') {
+            uploadBtn.innerHTML = '<i class="fas fa-upload mr-2"></i>Upload Invoice';
+        } else {
+            uploadBtn.innerHTML = '<i class="fas fa-upload mr-2"></i>Upload Receipt';
+        }
+    }
+    
+    // Initialize with receipt selected
+    selectDocumentType('receipt');
 </script>
 {% endblock %}
