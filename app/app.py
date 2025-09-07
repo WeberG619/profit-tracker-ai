@@ -4,6 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
 import os
 import io
+import sys
 from datetime import datetime
 import json
 from .models import db, Receipt, Job, LineItem, Company, User
@@ -158,6 +159,24 @@ def init_db_emergency():
             'database_uri': app.config.get('SQLALCHEMY_DATABASE_URI', 'not set')[:50] + '...'
         }), 500
 
+@app.route('/debug-env')
+def debug_env():
+    """Debug endpoint to check environment"""
+    # Only show in development or with a secret parameter
+    if not (app.debug or request.args.get('secret') == 'check-env-2024'):
+        return jsonify({'error': 'Not available'}), 403
+    
+    return jsonify({
+        'upload_folder': app.config.get('UPLOAD_FOLDER'),
+        'upload_folder_exists': os.path.exists(app.config.get('UPLOAD_FOLDER', '')),
+        'anthropic_key_set': bool(os.getenv('ANTHROPIC_API_KEY')),
+        'database_connected': bool(os.environ.get('DATABASE_URL')),
+        'render_env': bool(os.environ.get('RENDER')),
+        'allowed_extensions': list(app.config.get('ALLOWED_EXTENSIONS', [])),
+        'max_content_length': app.config.get('MAX_CONTENT_LENGTH'),
+        'pymupdf_available': 'fitz' in sys.modules or 'PyMuPDF' in sys.modules
+    })
+
 @app.route('/')
 @login_required
 @company_required
@@ -177,32 +196,67 @@ def dashboard():
 @company_required
 def upload_file():
     try:
+        logger.info(f"Upload request from user {current_user.username}")
+        
         if 'file' not in request.files:
+            logger.error("No file in request")
             return jsonify({'error': 'No file provided'}), 400
         
         file = request.files['file']
         if file.filename == '':
+            logger.error("Empty filename")
             return jsonify({'error': 'No file selected'}), 400
+        
+        logger.info(f"Uploading file: {file.filename}")
         
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             filename = f"{timestamp}_{filename}"
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            
+            # Ensure upload folder exists
+            upload_folder = app.config.get('UPLOAD_FOLDER', 'uploads')
+            if not os.path.isabs(upload_folder):
+                upload_folder = os.path.join(os.path.dirname(__file__), '..', upload_folder)
+            os.makedirs(upload_folder, exist_ok=True)
+            
+            filepath = os.path.join(upload_folder, filename)
+            logger.info(f"Saving to: {filepath}")
             file.save(filepath)
             
             # Create receipt record
             receipt = Receipt(
                 company_id=current_user.company_id,
                 image_path=filename,
-                uploaded_by=request.form.get('uploaded_by', 'Anonymous')
+                uploaded_by=request.form.get('uploaded_by', current_user.username)
             )
             db.session.add(receipt)
             db.session.commit()
+            logger.info(f"Receipt record created with ID: {receipt.id}")
             
-            # Process the image in the background
+            # Check if we have Anthropic API key
+            if not os.getenv('ANTHROPIC_API_KEY'):
+                logger.warning("ANTHROPIC_API_KEY not set, skipping OCR processing")
+                receipt.extracted_data = {
+                    'error': 'OCR processing not configured',
+                    'note': 'ANTHROPIC_API_KEY environment variable not set'
+                }
+                receipt.vendor_name = "Manual Entry Required"
+                receipt.total_amount = 0.0
+                db.session.commit()
+                
+                return jsonify({
+                    'success': True,
+                    'receipt_id': receipt.id,
+                    'redirect': url_for('review_receipt', receipt_id=receipt.id),
+                    'warning': 'OCR processing not available - manual entry required'
+                })
+            
+            # Process the image
             try:
+                logger.info("Starting OCR processing...")
                 extracted_data = process_receipt_image(filepath)
+                logger.info(f"OCR completed: {extracted_data}")
                 
                 # Update receipt with extracted data
                 receipt.vendor_name = extracted_data.get('vendor')
@@ -224,8 +278,10 @@ def upload_file():
                 db.session.commit()
                 
             except Exception as e:
-                logger.error(f"Error processing receipt: {str(e)}")
+                logger.error(f"Error processing receipt: {str(e)}", exc_info=True)
                 receipt.extracted_data = {'error': str(e)}
+                receipt.vendor_name = "Processing Failed"
+                receipt.total_amount = 0.0
                 db.session.commit()
             
             return jsonify({
@@ -234,11 +290,13 @@ def upload_file():
                 'redirect': url_for('review_receipt', receipt_id=receipt.id)
             })
         
-        return jsonify({'error': 'Invalid file type'}), 400
+        logger.error(f"Invalid file type: {file.filename}")
+        return jsonify({'error': 'Invalid file type. Allowed: ' + ', '.join(app.config['ALLOWED_EXTENSIONS'])}), 400
         
     except Exception as e:
-        logger.error(f"Upload error: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Upload error: {str(e)}", exc_info=True)
+        db.session.rollback()
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
 
 @app.route('/review/<int:receipt_id>')
 @login_required
