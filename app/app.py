@@ -329,7 +329,8 @@ def upload_file():
             return jsonify({
                 'success': True,
                 'receipt_id': receipt.id,
-                'redirect': url_for('review_receipt', receipt_id=receipt.id)
+                'redirect': url_for('review_receipt', receipt_id=receipt.id),
+                'message': f'Receipt uploaded successfully. ID: {receipt.id}'
             })
         
         logger.error(f"Invalid file type: {file.filename}")

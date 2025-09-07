@@ -206,7 +206,8 @@
                 alert('Error: ' + (data.error || 'Upload failed'));
             }
         } catch (error) {
-            alert('Error uploading file: ' + error.message);
+            console.error('Upload error:', error);
+            alert('Error uploading file: ' + error.message + '\n\nPlease try again or contact support if the issue persists.');
         } finally {
             uploadBtn.disabled = false;
             loading.classList.add('hidden');
