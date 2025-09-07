@@ -1,2 +1,1 @@
-release: echo "Running release phase..." && python init_app.py && echo "Release phase complete."
-web: gunicorn wsgi:app --workers 2 --timeout 120 --log-file - --log-level debug
+web: gunicorn wsgi_working:app --workers 2 --timeout 120 --log-file - --log-level info
