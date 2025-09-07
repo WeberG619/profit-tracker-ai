@@ -410,34 +410,54 @@ def register():
         return redirect(url_for('index'))
     
     if request.method == 'POST':
-        # Create company first
-        company = Company(
-            name=request.form.get('company_name'),
-            phone_number=request.form.get('phone_number')
-        )
-        db.session.add(company)
-        db.session.commit()
-        
-        # Create user
-        user = User(
-            username=request.form.get('username'),
-            email=request.form.get('email'),
-            company_id=company.id,
-            is_admin=True  # First user is admin
-        )
-        user.set_password(request.form.get('password'))
-        
         try:
+            # Get form data
+            company_name = request.form.get('company_name', '').strip()
+            username = request.form.get('username', '').strip()
+            email = request.form.get('email', '').strip()
+            password = request.form.get('password', '')
+            phone_number = request.form.get('phone_number', '').strip()
+            
+            # Validate required fields
+            if not company_name or not username or not password:
+                flash('Company name, username, and password are required', 'error')
+                return render_template('register.html')
+            
+            # Check if user already exists
+            existing_user = User.query.filter_by(username=username).first()
+            if existing_user:
+                flash('Username already exists', 'error')
+                return render_template('register.html')
+            
+            # Create company first
+            company = Company(
+                name=company_name,
+                phone_number=phone_number
+            )
+            db.session.add(company)
+            db.session.commit()
+            
+            # Create user
+            user = User(
+                username=username,
+                email=email or f"{username}@example.com",  # Default email if not provided
+                company_id=company.id,
+                is_admin=True  # First user is admin
+            )
+            user.set_password(password)
+            
             db.session.add(user)
             db.session.commit()
             
             login_user(user)
             flash('Account created successfully!', 'success')
-            return redirect(url_for('setup'))
+            return redirect(url_for('index'))  # Go to index instead of setup
             
         except Exception as e:
             db.session.rollback()
-            flash('Username or email already exists', 'error')
+            logger.error(f"Registration error: {str(e)}")
+            flash(f'Registration failed: {str(e)}', 'error')
+            return render_template('register.html')
     
     return render_template('register.html')
 
@@ -575,6 +595,13 @@ def receive_sms():
         resp.message("System error. Please try again later or use the web interface.")
         return str(resp)
 
-if __name__ == '__main__':
+@app.cli.command()
+def init_db_command():
+    """Initialize the database."""
     init_db()
+    print('Initialized the database.')
+
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
     app.run(debug=True, host='0.0.0.0', port=5000)
