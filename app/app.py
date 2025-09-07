@@ -1,11 +1,12 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, send_file
+from flask import Flask, render_template, request, jsonify, redirect, url_for, send_file, flash
+from flask_login import login_user, logout_user, login_required, current_user
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
 import os
 import io
 from datetime import datetime
 import json
-from .models import db, Receipt, Job, LineItem
+from .models import db, Receipt, Job, LineItem, Company, User
 from .config import Config
 from .receipt_processor import process_receipt_image
 from .sms_handler import parse_job_number, download_mms_media, send_sms_response, calculate_job_total, format_currency
@@ -13,6 +14,8 @@ from .analytics import get_dashboard_stats, get_jobs_summary, get_job_timeline, 
 from .insights import JobInsights, PriceRecommendation, AlertMonitor, get_profit_trends, get_job_type_profitability
 from .export_utils import export_receipts_csv, export_job_summary_pdf, export_receipts_zip
 from .scheduler import job_scheduler
+from .auth import login_manager, company_required
+from .money_losers import check_job_keywords
 from twilio.twiml.messaging_response import MessagingResponse
 import logging
 
@@ -26,8 +29,12 @@ app.config.from_object(Config)
 # Initialize database
 db.init_app(app)
 
-# Initialize scheduler
-job_scheduler.init_app(app)
+# Initialize login manager
+login_manager.init_app(app)
+
+# Initialize scheduler  
+if not app.config.get('TESTING'):
+    job_scheduler.init_app(app)
 
 # Create upload folder if it doesn't exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -351,6 +358,75 @@ def export_receipts_to_zip():
 def insights_page():
     """Insights and reports page"""
     return render_template('insights.html')
+
+# Authentication routes
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        user = User.query.filter_by(username=username).first()
+        
+        if user and user.check_password(password):
+            login_user(user, remember=True)
+            next_page = request.args.get('next')
+            return redirect(next_page) if next_page else redirect(url_for('index'))
+        else:
+            flash('Invalid username or password', 'error')
+    
+    return render_template('login.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        # Create company first
+        company = Company(
+            name=request.form.get('company_name'),
+            phone_number=request.form.get('phone_number')
+        )
+        db.session.add(company)
+        db.session.commit()
+        
+        # Create user
+        user = User(
+            username=request.form.get('username'),
+            email=request.form.get('email'),
+            company_id=company.id,
+            is_admin=True  # First user is admin
+        )
+        user.set_password(request.form.get('password'))
+        
+        try:
+            db.session.add(user)
+            db.session.commit()
+            
+            login_user(user)
+            flash('Account created successfully!', 'success')
+            return redirect(url_for('setup'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash('Username or email already exists', 'error')
+    
+    return render_template('register.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
+@app.route('/setup')
+@login_required
+def setup():
+    return render_template('setup.html', company=current_user.company)
 
 @app.route('/sms/receive', methods=['POST'])
 def receive_sms():
