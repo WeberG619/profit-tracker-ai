@@ -45,9 +45,14 @@ except Exception as e:
 try:
     upload_folder = app.config.get('UPLOAD_FOLDER', 'uploads')
     if not os.path.isabs(upload_folder):
-        upload_folder = os.path.join(os.path.dirname(__file__), '..', upload_folder)
+        # In production (Render), use /tmp for uploads
+        if os.environ.get('RENDER'):
+            upload_folder = '/tmp/uploads'
+        else:
+            upload_folder = os.path.join(os.path.dirname(__file__), '..', upload_folder)
     os.makedirs(upload_folder, exist_ok=True)
     app.config['UPLOAD_FOLDER'] = upload_folder
+    logger.info(f"Upload folder set to: {upload_folder}")
 except Exception as e:
     logger.warning(f"Could not create upload folder: {str(e)}")
 
@@ -177,6 +182,46 @@ def debug_env():
         'pymupdf_available': 'fitz' in sys.modules or 'PyMuPDF' in sys.modules
     })
 
+@app.route('/test-pdf-processing')
+def test_pdf_processing():
+    """Test PDF processing capability"""
+    if not (app.debug or request.args.get('secret') == 'test-pdf-2024'):
+        return jsonify({'error': 'Not available'}), 403
+    
+    try:
+        # Test PyMuPDF import
+        import fitz
+        fitz_version = fitz.VersionBind
+        
+        # Test creating a simple PDF
+        doc = fitz.open()
+        page = doc.new_page()
+        page.insert_text((50, 50), "Test PDF")
+        
+        # Test saving to memory
+        pdf_bytes = doc.tobytes()
+        doc.close()
+        
+        # Test Anthropic client
+        import anthropic
+        client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
+        
+        return jsonify({
+            'status': 'success',
+            'fitz_version': fitz_version,
+            'pdf_test': 'PDF creation successful',
+            'pdf_size': len(pdf_bytes),
+            'anthropic_client': 'initialized successfully'
+        })
+        
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'status': 'error',
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
 @app.route('/')
 @login_required
 @company_required
@@ -214,11 +259,8 @@ def upload_file():
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             filename = f"{timestamp}_{filename}"
             
-            # Ensure upload folder exists
-            upload_folder = app.config.get('UPLOAD_FOLDER', 'uploads')
-            if not os.path.isabs(upload_folder):
-                upload_folder = os.path.join(os.path.dirname(__file__), '..', upload_folder)
-            os.makedirs(upload_folder, exist_ok=True)
+            # Use the configured upload folder
+            upload_folder = app.config.get('UPLOAD_FOLDER')
             
             filepath = os.path.join(upload_folder, filename)
             logger.info(f"Saving to: {filepath}")
