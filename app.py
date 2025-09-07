@@ -1337,9 +1337,9 @@ def index():
                 <span>Profit Tracker</span>
             </div>
             <div class="nav-links">
-                <a href="#features">Features</a>
-                <a href="#how">How it Works</a>
-                <a href="#pricing">Pricing</a>
+                <a href="#features" onclick="scrollToSection(event, 'features')">Features</a>
+                <a href="#how" onclick="scrollToSection(event, 'how')">How it Works</a>
+                <a href="#pricing" onclick="scrollToSection(event, 'pricing')">Pricing</a>
                 <a href="/login" class="btn-login">Sign In</a>
             </div>
         </nav>
@@ -1353,7 +1353,7 @@ def index():
             </p>
             <div class="cta-buttons">
                 <a href="/login" class="btn-primary">Start Free Trial</a>
-                <a href="#demo" class="btn-secondary">Watch Demo</a>
+                <a href="#demo" class="btn-secondary" onclick="showDemo(event)">Watch Demo</a>
             </div>
         </div>
         
@@ -1417,7 +1417,326 @@ def index():
                 </div>
             </div>
         </div>
+        
+        <!-- How it Works Section -->
+        <div class="how-section" id="how">
+            <h2 style="text-align: center; font-size: 3rem; margin-bottom: 3rem;">How It Works</h2>
+            <div style="max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 3rem;">
+                <div class="step-card">
+                    <div class="step-number">1</div>
+                    <h3>Sign Up in Seconds</h3>
+                    <p>Create your account with just email and password. No credit card required for 14-day trial.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">2</div>
+                    <h3>Add Your Jobs</h3>
+                    <p>Enter job details and quoted price. Track multiple jobs simultaneously with ease.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">3</div>
+                    <h3>Capture Expenses</h3>
+                    <p>Snap photos of receipts or drag & drop files. AI extracts all the details automatically.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">4</div>
+                    <h3>See Real Profit</h3>
+                    <p>Watch your actual profit margins update in real-time. Get alerts before jobs go negative.</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Pricing Section -->
+        <div class="pricing-section" id="pricing">
+            <h2 style="text-align: center; font-size: 3rem; margin-bottom: 1rem; color: white;">Simple, Transparent Pricing</h2>
+            <p style="text-align: center; color: rgba(255,255,255,0.8); margin-bottom: 3rem; font-size: 1.25rem;">
+                No hidden fees. Cancel anytime. All features included.
+            </p>
+            <div style="max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+                <div class="price-card">
+                    <h3>Starter</h3>
+                    <div class="price">$29<span>/month</span></div>
+                    <ul>
+                        <li>Up to 10 active jobs</li>
+                        <li>Unlimited expense tracking</li>
+                        <li>Basic AI insights</li>
+                        <li>Mobile app access</li>
+                        <li>Email support</li>
+                    </ul>
+                    <a href="/login" class="price-btn">Start Free Trial</a>
+                </div>
+                <div class="price-card featured">
+                    <div class="badge">MOST POPULAR</div>
+                    <h3>Professional</h3>
+                    <div class="price">$79<span>/month</span></div>
+                    <ul>
+                        <li>Unlimited active jobs</li>
+                        <li>Advanced AI analytics</li>
+                        <li>Team collaboration (5 users)</li>
+                        <li>Custom reports</li>
+                        <li>Priority support</li>
+                        <li>API access</li>
+                    </ul>
+                    <a href="/login" class="price-btn primary">Start Free Trial</a>
+                </div>
+                <div class="price-card">
+                    <h3>Enterprise</h3>
+                    <div class="price">$199<span>/month</span></div>
+                    <ul>
+                        <li>Everything in Professional</li>
+                        <li>Unlimited team members</li>
+                        <li>White-label options</li>
+                        <li>Dedicated account manager</li>
+                        <li>Custom integrations</li>
+                        <li>24/7 phone support</li>
+                    </ul>
+                    <a href="/login" class="price-btn">Contact Sales</a>
+                </div>
+            </div>
+        </div>
     </div>
+    
+    <!-- Demo Modal -->
+    <div id="demoModal" class="demo-modal" style="display: none;">
+        <div class="demo-content">
+            <button class="close-demo" onclick="closeDemo()">&times;</button>
+            <h2>See Profit Tracker in Action</h2>
+            <div class="demo-video">
+                <iframe width="100%" height="450" 
+                    src="https://www.youtube.com/embed/dQw4w9WgXcQ" 
+                    frameborder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allowfullscreen>
+                </iframe>
+            </div>
+            <p style="text-align: center; margin-top: 1rem;">
+                Ready to transform your business? 
+                <a href="/login" style="color: #5E3AEE; font-weight: 600;">Start your free trial now</a>
+            </p>
+        </div>
+    </div>
+    
+    <style>
+        /* How it Works Styles */
+        .how-section {
+            padding: 6rem 4rem;
+            background: #f8f9fa;
+        }
+        
+        .step-card {
+            text-align: center;
+            position: relative;
+        }
+        
+        .step-number {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #5E3AEE 0%, #B83AF3 100%);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 0 auto 1.5rem;
+        }
+        
+        .step-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: #1a1a1a;
+        }
+        
+        .step-card p {
+            color: #6b7280;
+            line-height: 1.6;
+        }
+        
+        /* Pricing Styles */
+        .pricing-section {
+            padding: 6rem 4rem;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d1b69 100%);
+        }
+        
+        .price-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1.5rem;
+            padding: 2.5rem;
+            text-align: center;
+            position: relative;
+            transition: transform 0.3s;
+        }
+        
+        .price-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .price-card.featured {
+            border-color: #5E3AEE;
+            transform: scale(1.05);
+        }
+        
+        .price-card .badge {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #5E3AEE 0%, #B83AF3 100%);
+            color: white;
+            padding: 0.25rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .price-card h3 {
+            color: white;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .price {
+            font-size: 3rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 2rem;
+        }
+        
+        .price span {
+            font-size: 1rem;
+            font-weight: 400;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .price-card ul {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 2rem 0;
+        }
+        
+        .price-card li {
+            padding: 0.75rem 0;
+            color: rgba(255, 255, 255, 0.8);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .price-card li:last-child {
+            border-bottom: none;
+        }
+        
+        .price-btn {
+            display: inline-block;
+            width: 100%;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            text-decoration: none;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            transition: all 0.3s;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .price-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .price-btn.primary {
+            background: linear-gradient(135deg, #5E3AEE 0%, #B83AF3 100%);
+            border: none;
+        }
+        
+        .price-btn.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(94, 58, 238, 0.5);
+        }
+        
+        /* Demo Modal Styles */
+        .demo-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        
+        .demo-content {
+            background: white;
+            border-radius: 1rem;
+            padding: 2rem;
+            max-width: 800px;
+            width: 90%;
+            position: relative;
+        }
+        
+        .close-demo {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            font-size: 2rem;
+            cursor: pointer;
+            color: #6b7280;
+        }
+        
+        .demo-content h2 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            color: #1a1a1a;
+        }
+        
+        .demo-video {
+            background: #000;
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+        
+        @media (max-width: 768px) {
+            .how-section, .pricing-section {
+                padding: 4rem 2rem;
+            }
+            
+            .price-card.featured {
+                transform: none;
+            }
+        }
+    </style>
+    
+    <script>
+        // Smooth scrolling
+        function scrollToSection(e, sectionId) {
+            e.preventDefault();
+            const section = document.getElementById(sectionId);
+            if (section) {
+                section.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+        
+        // Demo modal
+        function showDemo(e) {
+            e.preventDefault();
+            document.getElementById('demoModal').style.display = 'flex';
+        }
+        
+        function closeDemo() {
+            document.getElementById('demoModal').style.display = 'none';
+        }
+        
+        // Close modal on outside click
+        document.getElementById('demoModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeDemo();
+            }
+        });
+    </script>
 </body>
 </html>
     '''
