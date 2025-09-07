@@ -441,11 +441,19 @@ def uploaded_file(filename):
 def landing():
     """Landing page for non-logged in users, company dashboard for logged in"""
     try:
-        if current_user.is_authenticated:
+        # Debug logging
+        app.logger.info("Landing page accessed")
+        
+        if hasattr(current_user, 'is_authenticated') and current_user.is_authenticated:
+            app.logger.info("User authenticated, redirecting to dashboard")
             return redirect(url_for('company_dashboard'))
+        
+        app.logger.info("Rendering landing.html template")
         return render_template('landing.html')
     except Exception as e:
-        logger.error(f"Error in landing page: {str(e)}")
+        app.logger.error(f"Error in landing page: {str(e)}")
+        import traceback
+        tb = traceback.format_exc()
         # Return a simple response if template fails
         return f"""
         <html>
@@ -455,11 +463,20 @@ def landing():
             <p>Welcome to Profit Tracker AI - AI-powered receipt tracking for contractors</p>
             <p><a href="/login">Login</a> | <a href="/register">Register</a></p>
             <hr>
-            <p style="color: red;">Template error: {str(e)}</p>
+            <p style="color: red;">Error: {str(e)}</p>
+            <details>
+                <summary>Debug Info</summary>
+                <pre style="text-align: left; background: #f0f0f0; padding: 10px;">{tb}</pre>
+            </details>
             <p><a href="/health">Check System Health</a></p>
         </body>
         </html>
         """
+
+@app.route('/test')
+def test_route():
+    """Simple test route"""
+    return '<h1>Test Route Works!</h1><p>If you see this, routing is working.</p><p><a href="/">Try Home</a></p>'
 
 @app.route('/health')
 def health_status():
