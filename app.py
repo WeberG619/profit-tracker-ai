@@ -1352,7 +1352,7 @@ def index():
                 where you make money and where you don't.
             </p>
             <div class="cta-buttons">
-                <a href="/login" class="btn-primary">Start Free Trial</a>
+                <a href="/signup" class="btn-primary">Start Free Trial</a>
                 <a href="#demo" class="btn-secondary" onclick="showDemo(event)">Watch Demo</a>
             </div>
         </div>
@@ -1462,7 +1462,7 @@ def index():
                         <li>Mobile app access</li>
                         <li>Email support</li>
                     </ul>
-                    <a href="/login" class="price-btn">Start Free Trial</a>
+                    <a href="/signup" class="price-btn">Start Free Trial</a>
                 </div>
                 <div class="price-card featured">
                     <div class="badge">MOST POPULAR</div>
@@ -1476,7 +1476,7 @@ def index():
                         <li>Priority support</li>
                         <li>API access</li>
                     </ul>
-                    <a href="/login" class="price-btn primary">Start Free Trial</a>
+                    <a href="/signup" class="price-btn primary">Start Free Trial</a>
                 </div>
                 <div class="price-card">
                     <h3>Enterprise</h3>
@@ -1489,7 +1489,7 @@ def index():
                         <li>Custom integrations</li>
                         <li>24/7 phone support</li>
                     </ul>
-                    <a href="/login" class="price-btn">Contact Sales</a>
+                    <a href="/signup" class="price-btn">Contact Sales</a>
                 </div>
             </div>
         </div>
@@ -1939,9 +1939,273 @@ def login():
         
         <div class="divider">or</div>
         
+        <a href="/signup" style="display: block; width: 100%; padding: 0.875rem; background: transparent; color: #B794F6; text-decoration: none; border-radius: 0.75rem; font-size: 1rem; font-weight: 600; text-align: center; border: 2px solid #5E3AEE; margin-bottom: 1rem; transition: all 0.3s;">
+            Create New Account
+        </a>
+        
         <div class="demo-info">
             <strong>Demo Account</strong><br>
             Username: admin | Password: admin123
+        </div>
+    </div>
+</body>
+</html>
+    '''
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+        
+        # Validation
+        if not username or not email or not password:
+            error = 'All fields are required'
+        elif password != confirm_password:
+            error = 'Passwords do not match'
+        elif username in users:
+            error = 'Username already exists'
+        else:
+            # Create new user
+            users[username] = password
+            session['username'] = username
+            return redirect(url_for('dashboard'))
+    
+    return '''
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sign Up - Profit Tracker AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Inter', -apple-system, sans-serif; 
+            background: #0A0A0A;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        
+        /* Animated Background */
+        .bg-animation {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: 0;
+            background: linear-gradient(45deg, #0A0A0A 0%, #1A0F2E 100%);
+        }
+        
+        .bg-animation::before {
+            content: '';
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            top: -50%;
+            left: -50%;
+            background: radial-gradient(circle, rgba(94, 58, 238, 0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: grid 20s linear infinite;
+        }
+        
+        @keyframes grid {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+        
+        .signup-container {
+            position: relative;
+            z-index: 1;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 3rem;
+            border-radius: 1.5rem;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        
+        .logo {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        
+        .logo-icon {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, #5E3AEE 0%, #B83AF3 100%);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+        
+        h2 {
+            text-align: center;
+            font-size: 1.875rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 2.5rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            font-size: 0.875rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        input {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.75rem;
+            font-size: 1rem;
+            color: white;
+            transition: all 0.3s;
+        }
+        
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #5E3AEE;
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 0 3px rgba(94, 58, 238, 0.1);
+        }
+        
+        button {
+            width: 100%;
+            padding: 0.875rem;
+            background: linear-gradient(135deg, #5E3AEE 0%, #B83AF3 100%);
+            color: white;
+            border: none;
+            border-radius: 0.75rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 20px rgba(94, 58, 238, 0.4);
+        }
+        
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 30px rgba(94, 58, 238, 0.5);
+        }
+        
+        .divider {
+            text-align: center;
+            margin: 1.5rem 0;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 0.875rem;
+        }
+        
+        .login-link {
+            text-align: center;
+            margin-top: 1.5rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .login-link a {
+            color: #B794F6;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .login-link a:hover {
+            text-decoration: underline;
+        }
+        
+        .benefits {
+            background: rgba(94, 58, 238, 0.1);
+            border: 1px solid rgba(94, 58, 238, 0.2);
+            padding: 1rem;
+            border-radius: 0.75rem;
+            margin-top: 1.5rem;
+            font-size: 0.875rem;
+        }
+        
+        .benefits ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .benefits li {
+            padding: 0.25rem 0;
+            color: #B794F6;
+        }
+        
+        .benefits li::before {
+            content: "✓ ";
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-animation"></div>
+    <div class="signup-container">
+        <div class="logo">
+            <div class="logo-icon">PT</div>
+        </div>
+        <h2>Create Your Account</h2>
+        <p class="subtitle">Start tracking profit in seconds</p>
+        
+        <form method="POST">
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" name="username" required autofocus placeholder="Choose a username">
+            </div>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" name="email" required placeholder="your@email.com">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" name="password" required placeholder="Create a password">
+            </div>
+            <div class="form-group">
+                <label>Confirm Password</label>
+                <input type="password" name="confirm_password" required placeholder="Confirm your password">
+            </div>
+            <button type="submit">Create Account</button>
+        </form>
+        
+        <div class="benefits">
+            <strong>14-Day Free Trial Includes:</strong>
+            <ul>
+                <li>Unlimited jobs tracking</li>
+                <li>AI-powered receipt scanning</li>
+                <li>Real-time profit analytics</li>
+                <li>No credit card required</li>
+            </ul>
+        </div>
+        
+        <div class="login-link">
+            Already have an account? <a href="/login">Sign In</a>
         </div>
     </div>
 </body>
