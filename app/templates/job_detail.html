@@ -6,7 +6,7 @@
 <div class="max-w-6xl mx-auto">
     <!-- Header -->
     <div class="mb-6">
-        <a href="{{ url_for('dashboard') }}" class="text-blue-600 hover:text-blue-800 mb-2 inline-block">
+        <a href="{{ url_for('analytics_dashboard') }}" class="text-blue-600 hover:text-blue-800 mb-2 inline-block">
             <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
         </a>
         <div class="flex justify-between items-start">
@@ -19,7 +19,7 @@
                    class="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
                     <i class="fas fa-file-pdf mr-2"></i>Export PDF
                 </a>
-                <a href="{{ url_for('index') }}?job={{ job.job_number }}" 
+                <a href="{{ url_for('upload_page') }}?job={{ job.job_number }}" 
                    class="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">
                     <i class="fas fa-plus mr-2"></i>Add Receipt
                 </a>
@@ -85,16 +85,16 @@
             <div class="p-4 hover:bg-gray-50 transition-colors">
                 <div class="flex items-start space-x-4">
                     <!-- Thumbnail -->
-                    <img src="{{ url_for('static', filename='../uploads/' + receipt.image_url) }}" 
+                    <img src="{{ url_for('uploaded_file', filename=receipt.image_path) }}" 
                          alt="Receipt"
                          class="w-20 h-20 object-cover rounded cursor-pointer"
-                         onclick="viewImage('{{ url_for('static', filename='../uploads/' + receipt.image_url) }}')">
+                         onclick="viewImage('{{ url_for('uploaded_file', filename=receipt.image_path) }}')">
                     
                     <!-- Receipt Info -->
                     <div class="flex-1">
                         <div class="flex justify-between items-start">
                             <div>
-                                <h4 class="font-semibold text-gray-800">{{ receipt.vendor or 'Unknown Vendor' }}</h4>
+                                <h4 class="font-semibold text-gray-800">{{ receipt.vendor_name or 'Unknown Vendor' }}</h4>
                                 <p class="text-sm text-gray-600">
                                     {{ receipt.created_at.strftime('%B %d, %Y at %I:%M %p') }}
                                     {% if receipt.upload_method == 'sms' %}
@@ -108,7 +108,7 @@
                                 {% endif %}
                             </div>
                             <div class="text-right">
-                                <p class="text-lg font-semibold text-gray-800">${{ "%.2f"|format(receipt.total or 0) }}</p>
+                                <p class="text-lg font-semibold text-gray-800">${{ "%.2f"|format(receipt.total_amount or 0) }}</p>
                                 <a href="{{ url_for('review_receipt', receipt_id=receipt.id) }}" 
                                    class="text-sm text-blue-600 hover:text-blue-800">
                                     <i class="fas fa-edit"></i> Edit
@@ -139,7 +139,7 @@
         <div class="text-center py-12">
             <i class="fas fa-receipt text-6xl text-gray-300 mb-4"></i>
             <p class="text-xl text-gray-500">No receipts uploaded yet</p>
-            <a href="{{ url_for('index') }}?job={{ job.job_number }}" 
+            <a href="{{ url_for('upload_page') }}?job={{ job.job_number }}" 
                class="mt-4 inline-block bg-green-600 text-white py-2 px-6 rounded-lg hover:bg-green-700 transition-colors">
                 Upload First Receipt
             </a>

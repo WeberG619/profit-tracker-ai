@@ -17,8 +17,8 @@
         {% for receipt in receipts %}
         <div class="bg-white p-4 rounded-lg shadow-md">
             <div class="flex justify-between items-start mb-2">
-                <h3 class="font-bold text-lg">{{ receipt.vendor or 'Unknown Vendor' }}</h3>
-                <span class="text-green-600 font-semibold">${{ "%.2f"|format(receipt.total or 0) }}</span>
+                <h3 class="font-bold text-lg">{{ receipt.vendor_name or 'Unknown Vendor' }}</h3>
+                <span class="text-green-600 font-semibold">${{ "%.2f"|format(receipt.total_amount or 0) }}</span>
             </div>
             <p class="text-gray-600 text-sm mb-2">
                 <i class="fas fa-calendar mr-1"></i>
@@ -41,7 +41,7 @@
                    class="flex-1 bg-blue-500 text-white py-2 px-3 rounded text-center hover:bg-blue-600">
                     <i class="fas fa-edit"></i> Edit
                 </a>
-                <button onclick="viewImage('{{ url_for('static', filename='../uploads/' + receipt.image_url) }}')"
+                <button onclick="viewImage('{{ url_for('uploaded_file', filename=receipt.image_path) }}')"
                         class="flex-1 bg-gray-500 text-white py-2 px-3 rounded hover:bg-gray-600">
                     <i class="fas fa-image"></i> View
                 </button>
@@ -71,10 +71,10 @@
                         {{ receipt.date.strftime('%Y-%m-%d') if receipt.date else '-' }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {{ receipt.vendor or 'Unknown' }}
+                        {{ receipt.vendor_name or 'Unknown' }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ${{ "%.2f"|format(receipt.total or 0) }}
+                        ${{ "%.2f"|format(receipt.total_amount or 0) }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {{ receipt.receipt_number or '-' }}
@@ -100,7 +100,7 @@
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <a href="{{ url_for('review_receipt', receipt_id=receipt.id) }}" 
                            class="text-blue-600 hover:text-blue-900 mr-3">Edit</a>
-                        <button onclick="viewImage('{{ url_for('static', filename='../uploads/' + receipt.image_url) }}')"
+                        <button onclick="viewImage('{{ url_for('uploaded_file', filename=receipt.image_path) }}')"
                                 class="text-gray-600 hover:text-gray-900">View</button>
                     </td>
                 </tr>
