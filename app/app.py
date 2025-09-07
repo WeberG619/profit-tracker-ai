@@ -317,6 +317,76 @@ def upload_debug():
             'trace': traceback.format_exc()
         }), 500
 
+@app.route('/test-anthropic-api')
+def test_anthropic_api():
+    """Test Anthropic API directly"""
+    import traceback
+    
+    try:
+        api_key = os.getenv('ANTHROPIC_API_KEY')
+        if not api_key:
+            return jsonify({'error': 'No ANTHROPIC_API_KEY set'}), 400
+            
+        # Test 1: Import anthropic
+        try:
+            import anthropic
+        except Exception as e:
+            return jsonify({'error': f'Cannot import anthropic: {str(e)}'}), 500
+            
+        # Test 2: Create client
+        try:
+            client = anthropic.Anthropic(api_key=api_key)
+        except Exception as e:
+            return jsonify({'error': f'Cannot create client: {str(e)}', 'trace': traceback.format_exc()}), 500
+            
+        # Test 3: Simple text request (no image)
+        try:
+            message = client.messages.create(
+                model="claude-3-5-sonnet-20241022",
+                max_tokens=100,
+                messages=[{
+                    "role": "user",
+                    "content": "Say 'API test successful' and nothing else."
+                }]
+            )
+            response_text = message.content[0].text if message.content else "No response"
+        except Exception as e:
+            # Try older model
+            try:
+                message = client.messages.create(
+                    model="claude-3-haiku-20240307",
+                    max_tokens=100,
+                    messages=[{
+                        "role": "user",
+                        "content": "Say 'API test successful' and nothing else."
+                    }]
+                )
+                response_text = f"Success with haiku: {message.content[0].text}"
+            except Exception as e2:
+                return jsonify({
+                    'error': 'API call failed', 
+                    'model_error': str(e),
+                    'fallback_error': str(e2),
+                    'trace': traceback.format_exc()
+                }), 500
+        
+        return jsonify({
+            'success': True,
+            'api_response': response_text,
+            'api_key_format': f"sk-ant-...{api_key[-4:]}" if len(api_key) > 10 else "Invalid format"
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'error': f'Unexpected error: {str(e)}',
+            'trace': traceback.format_exc()
+        }), 500
+
+@app.route('/test-api-page')
+def test_api_page():
+    """Simple page to test API"""
+    return render_template('test_api.html')
+
 @app.route('/')
 @login_required
 @company_required
