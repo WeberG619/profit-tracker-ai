@@ -462,7 +462,7 @@ def landing():
         """
 
 @app.route('/health')
-def health_check():
+def health_status():
     """Health check endpoint for debugging"""
     status = {
         'status': 'ok',
