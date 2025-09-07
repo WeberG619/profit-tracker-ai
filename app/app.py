@@ -101,6 +101,63 @@ def health_check():
         'has_database_url': bool(os.environ.get('DATABASE_URL'))
     })
 
+@app.route('/init-db-emergency')
+def init_db_emergency():
+    """Emergency database initialization endpoint"""
+    try:
+        # Check if already initialized
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        existing_tables = inspector.get_table_names()
+        
+        if existing_tables:
+            return jsonify({
+                'status': 'already_initialized',
+                'message': 'Database already has tables',
+                'tables': existing_tables
+            })
+        
+        # Create all tables
+        db.create_all()
+        
+        # Verify tables were created
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
+        
+        # Create default admin user
+        if not User.query.first():
+            company = Company(
+                name="Default Company",
+                phone_number="+1234567890"
+            )
+            db.session.add(company)
+            db.session.commit()
+            
+            user = User(
+                username="admin",
+                email="admin@example.com",
+                company_id=company.id,
+                is_admin=True
+            )
+            user.set_password("admin123")
+            db.session.add(user)
+            db.session.commit()
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Database initialized successfully',
+            'tables': tables,
+            'default_user': 'admin/admin123'
+        })
+        
+    except Exception as e:
+        logger.error(f"Database initialization error: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'error': str(e),
+            'database_uri': app.config.get('SQLALCHEMY_DATABASE_URI', 'not set')[:50] + '...'
+        }), 500
+
 @app.route('/')
 @login_required
 @company_required
