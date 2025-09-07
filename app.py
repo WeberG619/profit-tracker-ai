@@ -1,9 +1,15 @@
 import os
+import threading
+import time
+import requests
 from datetime import datetime
-from flask import Flask, render_template_string, request, redirect, url_for, session, flash
+from flask import Flask, render_template_string, request, redirect, url_for, session, flash, jsonify
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'profit-tracker-secret-2024')
+
+# Get the app URL from environment or use default
+APP_URL = os.environ.get('RENDER_EXTERNAL_URL', 'https://profit-tracker-ai.onrender.com')
 
 # Store data in memory for now (will be reset on restart)
 users = {'admin': 'admin123'}
@@ -555,8 +561,35 @@ def documents_page():
 
 @app.route('/health')
 def health():
-    return 'OK'
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.now().isoformat(),
+        'app': 'profit-tracker-ai',
+        'version': '1.0.0',
+        'environment': os.environ.get('RENDER', 'local')
+    })
+
+# Keep-alive function to prevent Render free tier spin-down
+def keep_alive():
+    """Ping the app every 10 minutes to keep it alive on Render free tier"""
+    while True:
+        time.sleep(600)  # Wait 10 minutes
+        try:
+            if APP_URL and 'render.com' in APP_URL:
+                response = requests.get(f"{APP_URL}/health", timeout=30)
+                print(f"Keep-alive ping: {response.status_code}")
+        except Exception as e:
+            print(f"Keep-alive error: {e}")
+
+# Start keep-alive thread only in production
+if os.environ.get('RENDER'):
+    keep_alive_thread = threading.Thread(target=keep_alive, daemon=True)
+    keep_alive_thread.start()
+    print("Keep-alive mechanism started")
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
+    print(f"Starting Profit Tracker AI on port {port}")
+    print(f"App URL: {APP_URL}")
+    print("Server starting...")
     app.run(host='0.0.0.0', port=port, debug=False)
