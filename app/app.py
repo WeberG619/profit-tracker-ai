@@ -387,6 +387,13 @@ def test_api_page():
     """Simple page to test API"""
     return render_template('test_api.html')
 
+@app.route('/uploads/<filename>')
+@login_required
+def uploaded_file(filename):
+    """Serve uploaded files"""
+    upload_folder = app.config.get('UPLOAD_FOLDER', '/tmp/uploads')
+    return send_file(os.path.join(upload_folder, filename))
+
 @app.route('/')
 @login_required
 @company_required
