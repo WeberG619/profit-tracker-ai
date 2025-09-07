@@ -440,38 +440,59 @@ def uploaded_file(filename):
 @app.route('/')
 def landing():
     """Landing page for non-logged in users, company dashboard for logged in"""
-    try:
-        # Debug logging
-        app.logger.info("Landing page accessed")
+    # Don't check authentication for now - just show landing page
+    return '''
+    <html>
+    <head>
+        <title>Profit Tracker AI</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+            .hero { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 100px 20px; text-align: center; }
+            .container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
+            .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin: 40px 0; }
+            .feature { background: #f7f7f7; padding: 30px; border-radius: 10px; }
+            .cta { background: #4CAF50; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px; }
+            .cta:hover { background: #45a049; }
+        </style>
+    </head>
+    <body>
+        <div class="hero">
+            <h1>🚀 Profit Tracker AI</h1>
+            <p style="font-size: 1.5em;">Stop losing money on jobs. AI-powered receipt tracking for contractors.</p>
+            <a href="/login" class="cta">Login</a>
+            <a href="/register" class="cta">Start Free Trial</a>
+        </div>
         
-        if hasattr(current_user, 'is_authenticated') and current_user.is_authenticated:
-            app.logger.info("User authenticated, redirecting to dashboard")
-            return redirect(url_for('company_dashboard'))
+        <div class="container">
+            <h2>Track Every Dollar. Maximize Every Profit.</h2>
+            
+            <div class="features">
+                <div class="feature">
+                    <h3>📸 Snap & Track</h3>
+                    <p>Take a photo of any receipt. Our AI extracts vendor, amount, and date instantly.</p>
+                </div>
+                <div class="feature">
+                    <h3>📊 Job Profitability</h3>
+                    <p>See real-time profit margins for every job. Know exactly where you make money.</p>
+                </div>
+                <div class="feature">
+                    <h3>💰 Invoice Management</h3>
+                    <p>Track both expenses AND income. Know what's owed to you at a glance.</p>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 50px;">
+                <p>Built specifically for plumbers, electricians, and contractors who want to stop leaving money on the table.</p>
+                <a href="/register" class="cta">Start Your Free Trial</a>
+            </div>
+        </div>
         
-        app.logger.info("Rendering landing.html template")
-        return render_template('landing.html')
-    except Exception as e:
-        app.logger.error(f"Error in landing page: {str(e)}")
-        import traceback
-        tb = traceback.format_exc()
-        # Return a simple response if template fails
-        return f"""
-        <html>
-        <head><title>Profit Tracker AI</title></head>
-        <body style="font-family: sans-serif; text-align: center; padding: 50px;">
-            <h1>Profit Tracker AI</h1>
-            <p>Welcome to Profit Tracker AI - AI-powered receipt tracking for contractors</p>
-            <p><a href="/login">Login</a> | <a href="/register">Register</a></p>
-            <hr>
-            <p style="color: red;">Error: {str(e)}</p>
-            <details>
-                <summary>Debug Info</summary>
-                <pre style="text-align: left; background: #f0f0f0; padding: 10px;">{tb}</pre>
-            </details>
-            <p><a href="/health">Check System Health</a></p>
-        </body>
-        </html>
-        """
+        <div style="background: #f0f0f0; padding: 20px; text-align: center;">
+            <p>Need help? <a href="/health">System Status</a> | <a href="mailto:support@profittrackerai.com">Contact Support</a></p>
+        </div>
+    </body>
+    </html>
+    '''
 
 @app.route('/test')
 def test_route():
@@ -1365,32 +1386,52 @@ def login():
             logger.error(f"Login error: {str(e)}")
             flash('An error occurred during login. Please try again.', 'error')
     
-    try:
-        return render_template('login.html')
-    except Exception as e:
-        logger.error(f"Login template error: {str(e)}")
-        # Return a basic HTML login form if template fails
-        return '''
-        <html>
-        <head><title>Login - Profit Tracker AI</title></head>
-        <body style="font-family: sans-serif; max-width: 400px; margin: 50px auto; padding: 20px;">
-            <h1>Login</h1>
+    # Always return simple HTML login form to avoid template issues
+    return '''
+    <html>
+    <head>
+        <title>Login - Profit Tracker AI</title>
+        <style>
+            body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 0; }
+            .container { max-width: 400px; margin: 100px auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            h1 { color: #333; text-align: center; }
+            input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+            button { width: 100%; background: #667eea; color: white; padding: 14px; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
+            button:hover { background: #5a67d8; }
+            .info { background: #e3f2fd; padding: 15px; border-radius: 4px; margin: 20px 0; }
+            a { color: #667eea; text-decoration: none; }
+            a:hover { text-decoration: underline; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🔐 Login</h1>
             <form method="POST">
-                <div style="margin-bottom: 15px;">
-                    <label for="username">Username:</label><br>
-                    <input type="text" id="username" name="username" style="width: 100%; padding: 5px;">
+                <div>
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" required autofocus>
                 </div>
-                <div style="margin-bottom: 15px;">
-                    <label for="password">Password:</label><br>
-                    <input type="password" id="password" name="password" style="width: 100%; padding: 5px;">
+                <div>
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required>
                 </div>
-                <button type="submit" style="padding: 10px 20px;">Login</button>
+                <button type="submit">Login</button>
             </form>
-            <p>Default credentials: admin / admin123</p>
-            <p><a href="/">Back to Home</a></p>
-        </body>
-        </html>
-        '''
+            
+            <div class="info">
+                <strong>Demo Account:</strong><br>
+                Username: admin<br>
+                Password: admin123
+            </div>
+            
+            <div style="text-align: center; margin-top: 20px;">
+                <a href="/">← Back to Home</a> | 
+                <a href="/register">Create Account</a>
+            </div>
+        </div>
+    </body>
+    </html>
+    '''
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
