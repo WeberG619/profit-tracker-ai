@@ -1296,17 +1296,32 @@ def login():
         return redirect(url_for('index'))
     
     if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        
-        user = User.query.filter_by(username=username).first()
-        
-        if user and user.check_password(password):
-            login_user(user, remember=True)
-            next_page = request.args.get('next')
-            return redirect(next_page) if next_page else redirect(url_for('company_dashboard'))
-        else:
-            flash('Invalid username or password', 'error')
+        try:
+            username = request.form.get('username')
+            password = request.form.get('password')
+            
+            if not username or not password:
+                flash('Please enter both username and password', 'error')
+                return render_template('login.html')
+            
+            user = User.query.filter_by(username=username).first()
+            
+            if user and user.check_password(password):
+                # Ensure user has a company
+                if not user.company_id:
+                    flash('Account configuration error. Please contact support.', 'error')
+                    logger.error(f"User {username} has no company_id")
+                    return render_template('login.html')
+                
+                login_user(user, remember=True)
+                next_page = request.args.get('next')
+                return redirect(next_page) if next_page else redirect(url_for('company_dashboard'))
+            else:
+                flash('Invalid username or password', 'error')
+                
+        except Exception as e:
+            logger.error(f"Login error: {str(e)}")
+            flash('An error occurred during login. Please try again.', 'error')
     
     return render_template('login.html')
 
