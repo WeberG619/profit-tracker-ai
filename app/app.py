@@ -126,34 +126,6 @@ def test_receipts():
             'trace': traceback.format_exc()
         }), 500
 
-@app.route('/health')
-def health_check():
-    """Health check endpoint"""
-    try:
-        # Test database connection
-        from sqlalchemy import text
-        db.session.execute(text('SELECT 1'))
-        db_status = 'connected'
-        db_uri = app.config.get('SQLALCHEMY_DATABASE_URI', 'not set')
-        if 'memory' in db_uri:
-            db_type = 'sqlite-memory'
-        elif 'sqlite' in db_uri:
-            db_type = 'sqlite-file'
-        elif 'postgresql' in db_uri:
-            db_type = 'postgresql'
-        else:
-            db_type = 'unknown'
-    except Exception as e:
-        db_status = f'error: {str(e)}'
-        db_type = 'error'
-    
-    return jsonify({
-        'status': 'ok',
-        'database': db_status,
-        'database_type': db_type,
-        'render': bool(os.environ.get('RENDER')),
-        'has_database_url': bool(os.environ.get('DATABASE_URL'))
-    })
 
 @app.route('/init-db-emergency')
 def init_db_emergency():
@@ -468,9 +440,26 @@ def uploaded_file(filename):
 @app.route('/')
 def landing():
     """Landing page for non-logged in users, company dashboard for logged in"""
-    if current_user.is_authenticated:
-        return redirect(url_for('company_dashboard'))
-    return render_template('landing.html')
+    try:
+        if current_user.is_authenticated:
+            return redirect(url_for('company_dashboard'))
+        return render_template('landing.html')
+    except Exception as e:
+        logger.error(f"Error in landing page: {str(e)}")
+        # Return a simple response if template fails
+        return f"""
+        <html>
+        <head><title>Profit Tracker AI</title></head>
+        <body style="font-family: sans-serif; text-align: center; padding: 50px;">
+            <h1>Profit Tracker AI</h1>
+            <p>Welcome to Profit Tracker AI - AI-powered receipt tracking for contractors</p>
+            <p><a href="/login">Login</a> | <a href="/register">Register</a></p>
+            <hr>
+            <p style="color: red;">Template error: {str(e)}</p>
+            <p><a href="/health">Check System Health</a></p>
+        </body>
+        </html>
+        """
 
 @app.route('/health')
 def health_check():
@@ -1359,7 +1348,32 @@ def login():
             logger.error(f"Login error: {str(e)}")
             flash('An error occurred during login. Please try again.', 'error')
     
-    return render_template('login.html')
+    try:
+        return render_template('login.html')
+    except Exception as e:
+        logger.error(f"Login template error: {str(e)}")
+        # Return a basic HTML login form if template fails
+        return '''
+        <html>
+        <head><title>Login - Profit Tracker AI</title></head>
+        <body style="font-family: sans-serif; max-width: 400px; margin: 50px auto; padding: 20px;">
+            <h1>Login</h1>
+            <form method="POST">
+                <div style="margin-bottom: 15px;">
+                    <label for="username">Username:</label><br>
+                    <input type="text" id="username" name="username" style="width: 100%; padding: 5px;">
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label for="password">Password:</label><br>
+                    <input type="password" id="password" name="password" style="width: 100%; padding: 5px;">
+                </div>
+                <button type="submit" style="padding: 10px 20px;">Login</button>
+            </form>
+            <p>Default credentials: admin / admin123</p>
+            <p><a href="/">Back to Home</a></p>
+        </body>
+        </html>
+        '''
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
