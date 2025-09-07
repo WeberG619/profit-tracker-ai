@@ -1,1 +1,1 @@
-web: gunicorn wsgi_ultra_minimal:app --workers 1 --timeout 120 --log-file -
+web: gunicorn wsgi_working:app --workers 2 --timeout 120 --log-file - --log-level info
