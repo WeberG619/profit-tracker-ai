@@ -6,7 +6,12 @@ load_dotenv()
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
     ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY')
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///instance/receipts.db'
+    # Use PostgreSQL in production, SQLite for local development
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///instance/receipts.db')
+    
+    # Fix for Render's postgres:// URLs (need postgresql://)
+    if SQLALCHEMY_DATABASE_URI and SQLALCHEMY_DATABASE_URI.startswith('postgres://'):
+        SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace('postgres://', 'postgresql://', 1)
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     UPLOAD_FOLDER = 'uploads'
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
