@@ -1,0 +1,372 @@
+{% extends "base.html" %}
+
+{% block title %}Setup Wizard - Receipt Processor{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <h2 class="text-2xl md:text-3xl font-bold mb-6 text-gray-800">Welcome to Receipt Processor!</h2>
+    <p class="text-lg text-gray-600 mb-8">Let's set up your account to get started.</p>
+    
+    <!-- Progress indicator -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <div class="step-circle active">1</div>
+                <span class="ml-2 font-semibold">Company Info</span>
+            </div>
+            <div class="flex items-center">
+                <div class="step-circle" id="step2">2</div>
+                <span class="ml-2">Job Templates</span>
+            </div>
+            <div class="flex items-center">
+                <div class="step-circle" id="step3">3</div>
+                <span class="ml-2">SMS Setup</span>
+            </div>
+            <div class="flex items-center">
+                <div class="step-circle" id="step4">4</div>
+                <span class="ml-2">Test Upload</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Step 1: Company Info -->
+    <div id="step1-content" class="setup-step">
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h3 class="text-xl font-semibold mb-4">Company Information</h3>
+            <form id="companyForm">
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-bold mb-2">Company Name</label>
+                    <input type="text" id="company_name" value="{{ company.name }}" required
+                           class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-blue-500">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-bold mb-2">Main Phone Number</label>
+                    <input type="tel" id="company_phone" value="{{ company.phone_number or '' }}"
+                           class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
+                           placeholder="+1234567890">
+                </div>
+                <button type="submit" class="bg-blue-600 text-white py-2 px-6 rounded-lg hover:bg-blue-700">
+                    Save & Continue
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Step 2: Job Templates -->
+    <div id="step2-content" class="setup-step hidden">
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h3 class="text-xl font-semibold mb-4">Create Your First Jobs</h3>
+            <p class="text-gray-600 mb-4">Add a few job templates to get started:</p>
+            
+            <div id="jobsList" class="mb-4">
+                <!-- Jobs will be listed here -->
+            </div>
+            
+            <form id="jobForm" class="border-t pt-4">
+                <div class="grid md:grid-cols-3 gap-4">
+                    <input type="text" id="job_number" placeholder="Job #1001" required
+                           class="px-4 py-2 border rounded-lg focus:outline-none focus:border-blue-500">
+                    <input type="text" id="customer_name" placeholder="Customer Name" required
+                           class="px-4 py-2 border rounded-lg focus:outline-none focus:border-blue-500">
+                    <input type="number" id="quoted_price" placeholder="Quote Amount" step="0.01"
+                           class="px-4 py-2 border rounded-lg focus:outline-none focus:border-blue-500">
+                </div>
+                <button type="submit" class="mt-4 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700">
+                    <i class="fas fa-plus mr-2"></i>Add Job
+                </button>
+            </form>
+            
+            <div class="mt-6 flex justify-between">
+                <button onclick="goToStep(1)" class="text-gray-600 hover:text-gray-800">
+                    <i class="fas fa-arrow-left mr-2"></i>Back
+                </button>
+                <button onclick="goToStep(3)" class="bg-blue-600 text-white py-2 px-6 rounded-lg hover:bg-blue-700">
+                    Continue
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Step 3: SMS Configuration -->
+    <div id="step3-content" class="setup-step hidden">
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h3 class="text-xl font-semibold mb-4">SMS Configuration (Optional)</h3>
+            <p class="text-gray-600 mb-4">Enable SMS receipt uploads for field workers:</p>
+            
+            <form id="twilioForm">
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-bold mb-2">Twilio Phone Number</label>
+                    <input type="tel" id="twilio_number" 
+                           class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
+                           placeholder="+1234567890">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-bold mb-2">Webhook URL</label>
+                    <div class="flex">
+                        <input type="text" id="webhook_url" readonly
+                               value="{{ request.url_root }}sms/receive"
+                               class="flex-1 px-4 py-2 border rounded-l-lg bg-gray-50">
+                        <button type="button" onclick="copyWebhook()" 
+                                class="bg-gray-600 text-white px-4 rounded-r-lg hover:bg-gray-700">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-1">Copy this URL to your Twilio webhook settings</p>
+                </div>
+                
+                <div class="bg-blue-50 p-4 rounded-lg">
+                    <p class="text-sm text-blue-700">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        You can skip this step and configure SMS later from settings.
+                    </p>
+                </div>
+                
+                <div class="mt-6 flex justify-between">
+                    <button type="button" onclick="goToStep(2)" class="text-gray-600 hover:text-gray-800">
+                        <i class="fas fa-arrow-left mr-2"></i>Back
+                    </button>
+                    <div>
+                        <button type="button" onclick="skipSMS()" class="mr-2 text-gray-600 hover:text-gray-800">
+                            Skip
+                        </button>
+                        <button type="submit" class="bg-blue-600 text-white py-2 px-6 rounded-lg hover:bg-blue-700">
+                            Save & Continue
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Step 4: Test Upload -->
+    <div id="step4-content" class="setup-step hidden">
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h3 class="text-xl font-semibold mb-4">Test Receipt Upload</h3>
+            <p class="text-gray-600 mb-4">Let's test the system with your first receipt:</p>
+            
+            <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
+                <p class="text-lg mb-4">Drop a receipt image here or click to upload</p>
+                <input type="file" id="testUpload" accept="image/*" class="hidden">
+                <button onclick="document.getElementById('testUpload').click()"
+                        class="bg-green-600 text-white py-2 px-6 rounded-lg hover:bg-green-700">
+                    <i class="fas fa-camera mr-2"></i>Choose Image
+                </button>
+            </div>
+            
+            <div id="uploadResult" class="mt-4 hidden">
+                <!-- Upload result will be shown here -->
+            </div>
+            
+            <div class="mt-8 text-center">
+                <button onclick="completeSetup()" 
+                        class="bg-green-600 text-white py-3 px-8 rounded-lg text-lg font-semibold hover:bg-green-700">
+                    <i class="fas fa-check mr-2"></i>Complete Setup
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.step-circle {
+    @apply w-10 h-10 rounded-full bg-gray-300 text-white flex items-center justify-center font-bold;
+}
+.step-circle.active {
+    @apply bg-blue-600;
+}
+.step-circle.completed {
+    @apply bg-green-600;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentStep = 1;
+const totalSteps = 4;
+
+function goToStep(step) {
+    // Hide all steps
+    for (let i = 1; i <= totalSteps; i++) {
+        document.getElementById(`step${i}-content`).classList.add('hidden');
+    }
+    
+    // Show current step
+    document.getElementById(`step${step}-content`).classList.remove('hidden');
+    
+    // Update progress indicators
+    for (let i = 1; i <= totalSteps; i++) {
+        const circle = document.getElementById(`step${i}`) || document.querySelector('.step-circle');
+        if (i < step) {
+            circle.classList.add('completed');
+            circle.classList.remove('active');
+        } else if (i === step) {
+            circle.classList.add('active');
+            circle.classList.remove('completed');
+        } else {
+            circle.classList.remove('active', 'completed');
+        }
+    }
+    
+    currentStep = step;
+}
+
+// Company form submission
+document.getElementById('companyForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const data = {
+        name: document.getElementById('company_name').value,
+        phone_number: document.getElementById('company_phone').value
+    };
+    
+    try {
+        const response = await fetch('/api/setup/company', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            goToStep(2);
+            loadJobs();
+        }
+    } catch (error) {
+        alert('Error saving company info');
+    }
+});
+
+// Job form submission
+document.getElementById('jobForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const data = {
+        job_number: document.getElementById('job_number').value,
+        customer_name: document.getElementById('customer_name').value,
+        quoted_price: document.getElementById('quoted_price').value
+    };
+    
+    try {
+        const response = await fetch('/api/jobs/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            document.getElementById('jobForm').reset();
+            loadJobs();
+        }
+    } catch (error) {
+        alert('Error creating job');
+    }
+});
+
+async function loadJobs() {
+    try {
+        const response = await fetch('/api/jobs');
+        const jobs = await response.json();
+        
+        const jobsList = document.getElementById('jobsList');
+        if (jobs.length === 0) {
+            jobsList.innerHTML = '<p class="text-gray-500">No jobs created yet</p>';
+        } else {
+            jobsList.innerHTML = jobs.map(job => `
+                <div class="flex justify-between items-center p-2 bg-gray-50 rounded mb-2">
+                    <span><strong>#${job.job_number}</strong> - ${job.customer_name}</span>
+                </div>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Error loading jobs');
+    }
+}
+
+// Twilio form submission
+document.getElementById('twilioForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const data = {
+        twilio_number: document.getElementById('twilio_number').value
+    };
+    
+    try {
+        const response = await fetch('/api/setup/twilio', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            goToStep(4);
+        }
+    } catch (error) {
+        alert('Error saving Twilio configuration');
+    }
+});
+
+function skipSMS() {
+    goToStep(4);
+}
+
+function copyWebhook() {
+    const input = document.getElementById('webhook_url');
+    input.select();
+    document.execCommand('copy');
+    alert('Webhook URL copied to clipboard!');
+}
+
+// Test upload
+document.getElementById('testUpload').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('uploaded_by', 'Setup Wizard');
+    
+    try {
+        const response = await fetch('/upload', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        const resultDiv = document.getElementById('uploadResult');
+        resultDiv.classList.remove('hidden');
+        
+        if (response.ok && result.success) {
+            resultDiv.innerHTML = `
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-green-700 font-semibold">
+                        <i class="fas fa-check-circle mr-2"></i>Success! Receipt uploaded and processed.
+                    </p>
+                    <a href="${result.redirect}" class="text-blue-600 hover:text-blue-800 mt-2 inline-block">
+                        View processed receipt →
+                    </a>
+                </div>
+            `;
+        } else {
+            resultDiv.innerHTML = `
+                <div class="bg-red-50 p-4 rounded-lg">
+                    <p class="text-red-700">
+                        <i class="fas fa-exclamation-circle mr-2"></i>Error: ${result.error}
+                    </p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Upload error:', error);
+    }
+});
+
+function completeSetup() {
+    window.location.href = '/dashboard';
+}
+
+// Initialize
+loadJobs();
+</script>
+{% endblock %}

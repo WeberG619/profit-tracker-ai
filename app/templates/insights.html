@@ -1,0 +1,445 @@
+{% extends "base.html" %}
+
+{% block title %}Insights & Reports - Receipt Processor{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800">Insights & Reports</h2>
+        <div class="space-x-2">
+            <button onclick="showExportModal()" class="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">
+                <i class="fas fa-download mr-2"></i>Export Data
+            </button>
+        </div>
+    </div>
+    
+    <!-- Alert Section -->
+    <div id="alertsSection" class="mb-8">
+        <h3 class="text-xl font-semibold mb-4">Active Alerts</h3>
+        <div id="alertsContainer" class="grid gap-4">
+            <!-- Alerts will be loaded here -->
+        </div>
+    </div>
+    
+    <!-- Charts Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Profit Trend Chart -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h3 class="text-lg font-semibold mb-4">Profit Trends (30 Days)</h3>
+            <canvas id="profitTrendChart" height="200"></canvas>
+        </div>
+        
+        <!-- Job Type Profitability -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h3 class="text-lg font-semibold mb-4">Profitability by Job Type</h3>
+            <canvas id="jobTypeProfitChart" height="200"></canvas>
+        </div>
+    </div>
+    
+    <!-- Pattern Insights -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+        <h3 class="text-lg font-semibold mb-4">Problem Patterns Detected</h3>
+        <div id="patternsContainer" class="overflow-x-auto">
+            <!-- Pattern insights will be loaded here -->
+        </div>
+    </div>
+    
+    <!-- Price Recommendation Tool -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+        <h3 class="text-lg font-semibold mb-4">Price Recommendation Engine</h3>
+        <div class="grid md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-gray-700 font-bold mb-2">Job Description</label>
+                <input type="text" id="priceJobDescription" 
+                       class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
+                       placeholder="e.g., Toilet repair Johnson residence">
+                <label class="block text-gray-700 font-bold mb-2 mt-4">Target Margin (%)</label>
+                <input type="number" id="priceTargetMargin" value="25"
+                       class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-blue-500">
+                <button onclick="getPricingRecommendation()" 
+                        class="mt-4 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
+                    Get Recommendation
+                </button>
+            </div>
+            <div id="priceRecommendationResult" class="bg-gray-50 rounded-lg p-4">
+                <p class="text-gray-500">Enter job details to get pricing recommendation</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Losing Jobs Table -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-800">Jobs Losing Money</h3>
+        </div>
+        <div id="losingJobsContainer" class="overflow-x-auto">
+            <!-- Losing jobs table will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<!-- Export Modal -->
+<div id="exportModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 w-full max-w-md m-4">
+        <h3 class="text-xl font-bold mb-4">Export Options</h3>
+        
+        <div class="space-y-4">
+            <!-- CSV Export -->
+            <div class="border rounded-lg p-4">
+                <h4 class="font-semibold mb-2">Export Receipts (CSV)</h4>
+                <p class="text-sm text-gray-600 mb-3">QuickBooks compatible format</p>
+                <div class="grid grid-cols-2 gap-2 mb-3">
+                    <input type="date" id="exportStartDate" class="px-3 py-2 border rounded">
+                    <input type="date" id="exportEndDate" class="px-3 py-2 border rounded">
+                </div>
+                <button onclick="exportCSV()" class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700">
+                    <i class="fas fa-file-csv mr-2"></i>Download CSV
+                </button>
+            </div>
+            
+            <!-- ZIP Export -->
+            <div class="border rounded-lg p-4">
+                <h4 class="font-semibold mb-2">Export All Data (ZIP)</h4>
+                <p class="text-sm text-gray-600 mb-3">Includes receipt images</p>
+                <label class="flex items-center mb-3">
+                    <input type="checkbox" id="includeImages" checked class="mr-2">
+                    <span class="text-sm">Include receipt images</span>
+                </label>
+                <button onclick="exportZIP()" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">
+                    <i class="fas fa-file-archive mr-2"></i>Download ZIP
+                </button>
+            </div>
+        </div>
+        
+        <button onclick="hideExportModal()" class="mt-4 w-full bg-gray-500 text-white py-2 rounded hover:bg-gray-600">
+            Close
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Chart instances
+let profitTrendChart;
+let jobTypeProfitChart;
+
+// Load all data on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadAlerts();
+    loadProfitTrends();
+    loadJobTypeProfitability();
+    loadPatternInsights();
+    loadLosingJobs();
+});
+
+async function loadAlerts() {
+    try {
+        const response = await fetch('/api/alerts/cost-overruns?threshold=80');
+        const alerts = await response.json();
+        
+        const container = document.getElementById('alertsContainer');
+        
+        if (alerts.length === 0) {
+            container.innerHTML = '<p class="text-gray-500">No active alerts</p>';
+            return;
+        }
+        
+        container.innerHTML = alerts.map(alert => `
+            <div class="bg-${alert.percentage >= 90 ? 'red' : 'yellow'}-50 border border-${alert.percentage >= 90 ? 'red' : 'yellow'}-200 rounded-lg p-4">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h4 class="font-semibold text-lg">Job #${alert.job_number}</h4>
+                        <p class="text-gray-700">${alert.customer}</p>
+                    </div>
+                    <span class="text-2xl font-bold text-${alert.percentage >= 90 ? 'red' : 'yellow'}-600">
+                        ${alert.percentage}%
+                    </span>
+                </div>
+                <div class="mt-2 grid grid-cols-3 gap-2 text-sm">
+                    <div>
+                        <p class="text-gray-500">Budget</p>
+                        <p class="font-semibold">$${alert.quoted_price.toFixed(2)}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">Spent</p>
+                        <p class="font-semibold">$${alert.current_costs.toFixed(2)}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">Remaining</p>
+                        <p class="font-semibold">$${alert.remaining_budget.toFixed(2)}</p>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        
+    } catch (error) {
+        console.error('Error loading alerts:', error);
+    }
+}
+
+async function loadProfitTrends() {
+    try {
+        const response = await fetch('/api/insights/profit-trends?days=30');
+        const trends = await response.json();
+        
+        const ctx = document.getElementById('profitTrendChart').getContext('2d');
+        
+        if (profitTrendChart) {
+            profitTrendChart.destroy();
+        }
+        
+        profitTrendChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: trends.map(t => new Date(t.date).toLocaleDateString()),
+                datasets: [{
+                    label: 'Revenue',
+                    data: trends.map(t => t.revenue),
+                    borderColor: 'rgb(59, 130, 246)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.1
+                }, {
+                    label: 'Costs',
+                    data: trends.map(t => t.costs),
+                    borderColor: 'rgb(239, 68, 68)',
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    tension: 0.1
+                }, {
+                    label: 'Profit',
+                    data: trends.map(t => t.profit),
+                    borderColor: 'rgb(34, 197, 94)',
+                    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value.toFixed(0);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error loading profit trends:', error);
+    }
+}
+
+async function loadJobTypeProfitability() {
+    try {
+        const response = await fetch('/api/insights/job-type-profitability');
+        const data = await response.json();
+        
+        const ctx = document.getElementById('jobTypeProfitChart').getContext('2d');
+        
+        if (jobTypeProfitChart) {
+            jobTypeProfitChart.destroy();
+        }
+        
+        jobTypeProfitChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.map(d => d.category),
+                datasets: [{
+                    label: 'Average Margin %',
+                    data: data.map(d => d.avg_margin),
+                    backgroundColor: data.map(d => 
+                        d.avg_margin > 20 ? 'rgba(34, 197, 94, 0.8)' :
+                        d.avg_margin > 5 ? 'rgba(251, 191, 36, 0.8)' :
+                        'rgba(239, 68, 68, 0.8)'
+                    )
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error loading job type profitability:', error);
+    }
+}
+
+async function loadPatternInsights() {
+    try {
+        const response = await fetch('/api/insights/patterns');
+        const patterns = await response.json();
+        
+        const container = document.getElementById('patternsContainer');
+        
+        if (patterns.length === 0) {
+            container.innerHTML = '<p class="text-gray-500">No patterns detected</p>';
+            return;
+        }
+        
+        container.innerHTML = `
+            <table class="w-full">
+                <thead>
+                    <tr class="text-left text-xs font-medium text-gray-500 uppercase">
+                        <th class="p-2">Job Type</th>
+                        <th class="p-2">Jobs</th>
+                        <th class="p-2">Avg Margin</th>
+                        <th class="p-2">% Losing</th>
+                        <th class="p-2">Total Lost</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${patterns.map(p => `
+                        <tr class="border-t">
+                            <td class="p-2 font-semibold">${p.keyword.charAt(0).toUpperCase() + p.keyword.slice(1)}</td>
+                            <td class="p-2">${p.job_count}</td>
+                            <td class="p-2 ${p.avg_margin < 0 ? 'text-red-600' : ''}">${p.avg_margin}%</td>
+                            <td class="p-2">${p.losing_percentage}%</td>
+                            <td class="p-2 text-red-600">$${Math.abs(p.total_lost).toFixed(2)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+        
+    } catch (error) {
+        console.error('Error loading patterns:', error);
+    }
+}
+
+async function loadLosingJobs() {
+    try {
+        const response = await fetch('/api/jobs/losing-money');
+        const jobs = await response.json();
+        
+        const container = document.getElementById('losingJobsContainer');
+        
+        if (jobs.length === 0) {
+            container.innerHTML = '<p class="text-center py-8 text-gray-500">No jobs currently losing money</p>';
+            return;
+        }
+        
+        container.innerHTML = `
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Job</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quoted</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Costs</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Loss</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y">
+                    ${jobs.map(job => `
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4">#${job.job_number}</td>
+                            <td class="px-6 py-4">${job.customer}</td>
+                            <td class="px-6 py-4">$${job.quoted_price.toFixed(2)}</td>
+                            <td class="px-6 py-4">$${job.current_costs.toFixed(2)}</td>
+                            <td class="px-6 py-4 text-red-600 font-semibold">-$${job.loss_amount.toFixed(2)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+        
+    } catch (error) {
+        console.error('Error loading losing jobs:', error);
+    }
+}
+
+async function getPricingRecommendation() {
+    const description = document.getElementById('priceJobDescription').value;
+    const targetMargin = document.getElementById('priceTargetMargin').value;
+    
+    if (!description) {
+        alert('Please enter a job description');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/insights/pricing-suggestions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ description, target_margin: parseInt(targetMargin) })
+        });
+        
+        const result = await response.json();
+        const resultDiv = document.getElementById('priceRecommendationResult');
+        
+        if (response.ok) {
+            resultDiv.innerHTML = `
+                <h4 class="font-semibold mb-2 text-green-600">Pricing Recommendation</h4>
+                <div class="space-y-2">
+                    <p><strong>Similar jobs found:</strong> ${result.similar_jobs_found}</p>
+                    <p><strong>Average actual cost:</strong> $${result.avg_actual_cost.toFixed(2)}</p>
+                    <p><strong>Average quoted:</strong> $${result.avg_quoted_price.toFixed(2)}</p>
+                    <p><strong>Historical margin:</strong> ${result.avg_profit_margin}%</p>
+                    <div class="mt-3 p-3 bg-green-100 rounded">
+                        <p class="text-lg"><strong>Recommended price:</strong></p>
+                        <p class="text-2xl font-bold text-green-600">$${result.recommended_price.toFixed(2)}</p>
+                        <p class="text-sm text-gray-600">For ${result.target_margin}% profit margin</p>
+                    </div>
+                    <p class="text-sm text-gray-600">Confidence: ${result.confidence}</p>
+                </div>
+            `;
+        } else {
+            resultDiv.innerHTML = '<p class="text-red-600">No similar jobs found for comparison</p>';
+        }
+        
+    } catch (error) {
+        console.error('Error getting pricing recommendation:', error);
+    }
+}
+
+function showExportModal() {
+    document.getElementById('exportModal').classList.remove('hidden');
+    document.getElementById('exportModal').classList.add('flex');
+}
+
+function hideExportModal() {
+    document.getElementById('exportModal').classList.add('hidden');
+    document.getElementById('exportModal').classList.remove('flex');
+}
+
+function exportCSV() {
+    const startDate = document.getElementById('exportStartDate').value;
+    const endDate = document.getElementById('exportEndDate').value;
+    
+    let url = '/api/export/receipts-csv?';
+    if (startDate) url += `start_date=${startDate}&`;
+    if (endDate) url += `end_date=${endDate}&`;
+    
+    window.location.href = url;
+}
+
+function exportZIP() {
+    const includeImages = document.getElementById('includeImages').checked;
+    window.location.href = `/api/export/receipts-zip?include_images=${includeImages}`;
+}
+
+// Close modal on background click
+document.getElementById('exportModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        hideExportModal();
+    }
+});
+</script>
+{% endblock %}

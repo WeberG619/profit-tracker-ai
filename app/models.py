@@ -1,0 +1,102 @@
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime
+
+db = SQLAlchemy()
+
+class Company(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    phone_number = db.Column(db.String(20))
+    twilio_configured = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    users = db.relationship('User', backref='company', lazy=True)
+    jobs = db.relationship('Job', backref='company', lazy=True)
+    receipts = db.relationship('Receipt', backref='company', lazy=True)
+
+class User(db.Model, UserMixin):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255))
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    is_admin = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+    
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+class Receipt(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    image_url = db.Column(db.String(500), nullable=False)
+    vendor = db.Column(db.String(200))
+    total = db.Column(db.Float)
+    date = db.Column(db.Date)
+    receipt_number = db.Column(db.String(100))
+    extracted_data = db.Column(db.JSON)
+    job_id = db.Column(db.Integer, db.ForeignKey('job.id'))
+    uploaded_by = db.Column(db.String(100))
+    phone_number = db.Column(db.String(20))  # Track SMS sender
+    upload_method = db.Column(db.String(20), default='web')  # 'web' or 'sms'
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    line_items = db.relationship('LineItem', backref='receipt', lazy=True, cascade='all, delete-orphan')
+    job = db.relationship('Job', backref='receipts')
+
+class Job(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    job_number = db.Column(db.String(50), nullable=False)
+    customer_name = db.Column(db.String(200))
+    quoted_price = db.Column(db.Float)
+    status = db.Column(db.String(50), default='active')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    completed_at = db.Column(db.DateTime)
+    
+    # Add unique constraint for job_number + company_id
+    __table_args__ = (db.UniqueConstraint('job_number', 'company_id'),)
+    
+    @property
+    def current_costs(self):
+        """Calculate total costs from all receipts"""
+        return sum(r.total or 0 for r in self.receipts)
+    
+    @property
+    def profit_amount(self):
+        """Calculate profit amount"""
+        if self.quoted_price:
+            return self.quoted_price - self.current_costs
+        return 0
+    
+    @property
+    def profit_margin(self):
+        """Calculate profit margin percentage"""
+        if self.quoted_price and self.quoted_price > 0:
+            return ((self.quoted_price - self.current_costs) / self.quoted_price) * 100
+        return 0
+    
+    @property
+    def status_color(self):
+        """Return color based on profit margin"""
+        margin = self.profit_margin
+        if margin > 20:
+            return 'green'
+        elif margin >= 5:
+            return 'yellow'
+        else:
+            return 'red'
+
+class LineItem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    receipt_id = db.Column(db.Integer, db.ForeignKey('receipt.id'), nullable=False)
+    description = db.Column(db.String(500))
+    amount = db.Column(db.Float)
+    category = db.Column(db.String(100))

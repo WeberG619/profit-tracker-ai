@@ -1,0 +1,68 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# Flask
+instance/
+.webassets-cache
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment
+.env
+.env.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+uploads/
+logs/
+*.log
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+docs/_build/
+*.md
+README.md
+CONTRIBUTING.md
+
+# Tests
+tests/
+pytest.ini
+.coveragerc
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Build artifacts
+dist/
+build/

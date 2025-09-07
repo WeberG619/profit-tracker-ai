@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}Review Receipt - Receipt Processor{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <h2 class="text-2xl md:text-3xl font-bold mb-6 text-gray-800">Review & Edit Receipt</h2>
+    
+    <div class="grid md:grid-cols-2 gap-6">
+        <!-- Image Preview -->
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h3 class="text-xl font-semibold mb-4">Receipt Image</h3>
+            <img src="{{ url_for('static', filename='../uploads/' + receipt.image_url) }}" 
+                 alt="Receipt" 
+                 class="w-full h-auto rounded-lg shadow-md cursor-pointer"
+                 onclick="window.open(this.src, '_blank')">
+            <p class="text-sm text-gray-600 mt-2">Click image to view full size</p>
+        </div>
+        
+        <!-- Extracted Data Form -->
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h3 class="text-xl font-semibold mb-4">Receipt Details</h3>
+            
+            <form id="reviewForm">
+                <!-- Vendor -->
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-bold mb-2">Vendor/Store</label>
+                    <input type="text" 
+                           id="vendor" 
+                           value="{{ receipt.vendor or '' }}"
+                           class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-blue-500 mobile-large">
+                </div>
+                
+                <!-- Total -->
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-bold mb-2">Total Amount</label>
+                    <input type="number" 
+                           id="total" 
+                           value="{{ receipt.total or '' }}"
+                           step="0.01"
+                           class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-blue-500 mobile-large">
+                </div>
+                
+                <!-- Date -->
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-bold mb-2">Date</label>
+                    <input type="date" 
+                           id="date" 
+                           value="{{ receipt.date.strftime('%Y-%m-%d') if receipt.date else '' }}"
+                           class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-blue-500 mobile-large">
+                </div>
+                
+                <!-- Receipt Number -->
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-bold mb-2">Receipt/Invoice #</label>
+                    <input type="text" 
+                           id="receipt_number" 
+                           value="{{ receipt.receipt_number or '' }}"
+                           class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-blue-500 mobile-large">
+                </div>
+                
+                <!-- Job Assignment -->
+                <div class="mb-6">
+                    <label class="block text-gray-700 font-bold mb-2">Assign to Job</label>
+                    <select id="job_id" 
+                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-blue-500 mobile-large">
+                        <option value="">-- Select Job --</option>
+                        {% for job in jobs %}
+                        <option value="{{ job.id }}" {% if receipt.job_id == job.id %}selected{% endif %}>
+                            {{ job.job_number }} - {{ job.customer_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Line Items -->
+                <div class="mb-6">
+                    <h4 class="text-lg font-bold mb-3">Line Items</h4>
+                    <div id="lineItems" class="space-y-3">
+                        {% for item in receipt.line_items %}
+                        <div class="line-item flex gap-2">
+                            <input type="text" 
+                                   placeholder="Description" 
+                                   value="{{ item.description }}"
+                                   class="flex-1 px-3 py-2 border rounded focus:outline-none focus:border-blue-500">
+                            <input type="number" 
+                                   placeholder="Amount" 
+                                   value="{{ item.amount }}"
+                                   step="0.01"
+                                   class="w-24 px-3 py-2 border rounded focus:outline-none focus:border-blue-500">
+                            <button type="button" onclick="removeLineItem(this)" class="text-red-500 hover:text-red-700">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" 
+                            onclick="addLineItem()"
+                            class="mt-3 text-blue-600 hover:text-blue-800 font-semibold">
+                        <i class="fas fa-plus mr-1"></i>Add Line Item
+                    </button>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="flex gap-3">
+                    <button type="submit" 
+                            class="flex-1 bg-green-600 text-white py-3 px-6 rounded-lg text-lg font-semibold hover:bg-green-700 transition-colors">
+                        <i class="fas fa-save mr-2"></i>Save Changes
+                    </button>
+                    <a href="{{ url_for('list_receipts') }}" 
+                       class="flex-1 bg-gray-500 text-white py-3 px-6 rounded-lg text-lg font-semibold hover:bg-gray-600 transition-colors text-center">
+                        <i class="fas fa-times mr-2"></i>Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function addLineItem() {
+        const container = document.getElementById('lineItems');
+        const div = document.createElement('div');
+        div.className = 'line-item flex gap-2';
+        div.innerHTML = `
+            <input type="text" 
+                   placeholder="Description" 
+                   class="flex-1 px-3 py-2 border rounded focus:outline-none focus:border-blue-500">
+            <input type="number" 
+                   placeholder="Amount" 
+                   step="0.01"
+                   class="w-24 px-3 py-2 border rounded focus:outline-none focus:border-blue-500">
+            <button type="button" onclick="removeLineItem(this)" class="text-red-500 hover:text-red-700">
+                <i class="fas fa-trash"></i>
+            </button>
+        `;
+        container.appendChild(div);
+    }
+    
+    function removeLineItem(button) {
+        button.parentElement.remove();
+    }
+    
+    document.getElementById('reviewForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        // Collect line items
+        const lineItems = [];
+        document.querySelectorAll('.line-item').forEach(item => {
+            const description = item.querySelector('input[placeholder="Description"]').value;
+            const amount = item.querySelector('input[placeholder="Amount"]').value;
+            if (description && amount) {
+                lineItems.push({
+                    description: description,
+                    amount: parseFloat(amount),
+                    category: 'Uncategorized'
+                });
+            }
+        });
+        
+        const data = {
+            vendor: document.getElementById('vendor').value,
+            total: document.getElementById('total').value,
+            date: document.getElementById('date').value,
+            receipt_number: document.getElementById('receipt_number').value,
+            job_id: document.getElementById('job_id').value,
+            line_items: lineItems
+        };
+        
+        try {
+            const response = await fetch('/update_receipt/{{ receipt.id }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok && result.success) {
+                alert('Receipt updated successfully!');
+                window.location.href = '/receipts';
+            } else {
+                alert('Error: ' + (result.error || 'Update failed'));
+            }
+        } catch (error) {
+            alert('Error updating receipt: ' + error.message);
+        }
+    });
+</script>
+{% endblock %}

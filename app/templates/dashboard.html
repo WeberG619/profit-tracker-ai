@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Receipt Processor{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800">Profit Dashboard</h2>
+        <button onclick="showQuickEntry()" 
+                class="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">
+            <i class="fas fa-plus mr-2"></i>New Job
+        </button>
+    </div>
+    
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Total Jobs -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Total Active Jobs</p>
+                    <p class="text-3xl font-bold text-gray-800 mt-1">{{ stats.total_jobs }}</p>
+                </div>
+                <div class="bg-blue-100 p-3 rounded-full">
+                    <i class="fas fa-briefcase text-blue-600 text-2xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Jobs Over Budget -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Jobs Over Budget</p>
+                    <p class="text-3xl font-bold text-red-600 mt-1">{{ stats.jobs_over_budget }}</p>
+                </div>
+                <div class="bg-red-100 p-3 rounded-full">
+                    <i class="fas fa-exclamation-triangle text-red-600 text-2xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Average Margin -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Avg Profit Margin</p>
+                    <p class="text-3xl font-bold {% if stats.avg_profit_margin > 20 %}text-green-600{% elif stats.avg_profit_margin > 5 %}text-yellow-600{% else %}text-red-600{% endif %} mt-1">
+                        {{ stats.avg_profit_margin }}%
+                    </p>
+                </div>
+                <div class="bg-green-100 p-3 rounded-full">
+                    <i class="fas fa-chart-line text-green-600 text-2xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Money Lost -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Lost This Month</p>
+                    <p class="text-3xl font-bold text-red-600 mt-1">${{ "%.0f"|format(stats.money_lost_month) }}</p>
+                </div>
+                <div class="bg-red-100 p-3 rounded-full">
+                    <i class="fas fa-dollar-sign text-red-600 text-2xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Jobs Table -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-800">Active Jobs</h3>
+        </div>
+        
+        <!-- Mobile view -->
+        <div class="md:hidden">
+            {% for job in jobs %}
+            <a href="{{ url_for('job_detail', job_id=job.id) }}" 
+               class="block p-4 border-b hover:bg-gray-50 transition-colors">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <h4 class="font-semibold text-gray-800">Job #{{ job.job_number }}</h4>
+                        <p class="text-sm text-gray-600">{{ job.customer_name }}</p>
+                    </div>
+                    <span class="px-2 py-1 rounded text-xs font-semibold
+                        {% if job.status_color == 'green' %}bg-green-100 text-green-800
+                        {% elif job.status_color == 'yellow' %}bg-yellow-100 text-yellow-800
+                        {% else %}bg-red-100 text-red-800{% endif %}">
+                        {{ job.profit_margin }}%
+                    </span>
+                </div>
+                <div class="grid grid-cols-3 gap-2 text-sm">
+                    <div>
+                        <p class="text-gray-500">Quoted</p>
+                        <p class="font-semibold">${{ "%.0f"|format(job.quoted_price) }}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">Costs</p>
+                        <p class="font-semibold">${{ "%.0f"|format(job.current_costs) }}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">Profit</p>
+                        <p class="font-semibold {% if job.profit_amount < 0 %}text-red-600{% else %}text-green-600{% endif %}">
+                            ${{ "%.0f"|format(job.profit_amount) }}
+                        </p>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        
+        <!-- Desktop view -->
+        <table class="hidden md:table w-full">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Job Number</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quoted</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Costs</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Profit</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Margin</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for job in jobs %}
+                <tr class="hover:bg-gray-50 cursor-pointer" onclick="window.location.href='{{ url_for('job_detail', job_id=job.id) }}'">
+                    <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+                        #{{ job.job_number }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-gray-900">
+                        {{ job.customer_name }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-gray-900">
+                        ${{ "%.2f"|format(job.quoted_price) }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-gray-900">
+                        ${{ "%.2f"|format(job.current_costs) }}
+                        <span class="text-xs text-gray-500">({{ job.receipt_count }} receipts)</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap font-semibold {% if job.profit_amount < 0 %}text-red-600{% else %}text-green-600{% endif %}">
+                        ${{ "%.2f"|format(job.profit_amount) }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 py-1 rounded text-sm font-semibold
+                            {% if job.status_color == 'green' %}bg-green-100 text-green-800
+                            {% elif job.status_color == 'yellow' %}bg-yellow-100 text-yellow-800
+                            {% else %}bg-red-100 text-red-800{% endif %}">
+                            {{ job.profit_margin }}%
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="w-4 h-4 rounded-full 
+                            {% if job.status_color == 'green' %}bg-green-500
+                            {% elif job.status_color == 'yellow' %}bg-yellow-500
+                            {% else %}bg-red-500{% endif %}">
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    {% if not jobs %}
+    <div class="text-center py-12">
+        <i class="fas fa-chart-line text-6xl text-gray-300 mb-4"></i>
+        <p class="text-xl text-gray-500">No active jobs yet</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Quick Entry Modal -->
+<div id="quickEntryModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 w-full max-w-md m-4">
+        <h3 class="text-xl font-bold mb-4">Quick Job Entry</h3>
+        <form id="quickJobForm">
+            <div class="mb-4">
+                <label class="block text-gray-700 font-bold mb-2">Job Number</label>
+                <input type="text" id="quick_job_number" required
+                       class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
+                       placeholder="e.g., 1234">
+            </div>
+            <div class="mb-4">
+                <label class="block text-gray-700 font-bold mb-2">Customer Name</label>
+                <input type="text" id="quick_customer_name" required
+                       class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
+                       placeholder="e.g., Johnson Construction">
+            </div>
+            <div class="mb-6">
+                <label class="block text-gray-700 font-bold mb-2">Quote Amount</label>
+                <input type="number" id="quick_quoted_price" required step="0.01"
+                       class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
+                       placeholder="e.g., 5000.00">
+            </div>
+            <div class="flex gap-3">
+                <button type="submit" 
+                        class="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">
+                    <i class="fas fa-check mr-2"></i>Create Job
+                </button>
+                <button type="button" onclick="hideQuickEntry()"
+                        class="flex-1 bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function showQuickEntry() {
+        document.getElementById('quickEntryModal').classList.remove('hidden');
+        document.getElementById('quickEntryModal').classList.add('flex');
+        document.getElementById('quick_job_number').focus();
+    }
+    
+    function hideQuickEntry() {
+        document.getElementById('quickEntryModal').classList.add('hidden');
+        document.getElementById('quickEntryModal').classList.remove('flex');
+        document.getElementById('quickJobForm').reset();
+    }
+    
+    document.getElementById('quickJobForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const data = {
+            job_number: document.getElementById('quick_job_number').value,
+            customer_name: document.getElementById('quick_customer_name').value,
+            quoted_price: parseFloat(document.getElementById('quick_quoted_price').value)
+        };
+        
+        try {
+            const response = await fetch('/api/jobs/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok && result.success) {
+                window.location.reload();
+            } else {
+                alert('Error: ' + (result.error || 'Failed to create job'));
+            }
+        } catch (error) {
+            alert('Error creating job: ' + error.message);
+        }
+    });
+    
+    // Close modal on background click
+    document.getElementById('quickEntryModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            hideQuickEntry();
+        }
+    });
+</script>
+{% endblock %}

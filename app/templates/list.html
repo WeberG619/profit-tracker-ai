@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}All Receipts - Receipt Processor{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800">All Receipts</h2>
+        <a href="{{ url_for('index') }}" 
+           class="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
+            <i class="fas fa-plus mr-2"></i>Upload New
+        </a>
+    </div>
+    
+    <!-- Mobile view (cards) -->
+    <div class="md:hidden space-y-4">
+        {% for receipt in receipts %}
+        <div class="bg-white p-4 rounded-lg shadow-md">
+            <div class="flex justify-between items-start mb-2">
+                <h3 class="font-bold text-lg">{{ receipt.vendor or 'Unknown Vendor' }}</h3>
+                <span class="text-green-600 font-semibold">${{ "%.2f"|format(receipt.total or 0) }}</span>
+            </div>
+            <p class="text-gray-600 text-sm mb-2">
+                <i class="fas fa-calendar mr-1"></i>
+                {{ receipt.date.strftime('%Y-%m-%d') if receipt.date else 'No date' }}
+                {% if receipt.upload_method == 'sms' %}
+                <span class="ml-2 text-purple-600">
+                    <i class="fas fa-sms"></i> SMS
+                </span>
+                {% endif %}
+            </p>
+            {% if receipt.job %}
+            <p class="text-sm mb-2">
+                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                    Job #{{ receipt.job.job_number }}
+                </span>
+            </p>
+            {% endif %}
+            <div class="flex gap-2 mt-3">
+                <a href="{{ url_for('review_receipt', receipt_id=receipt.id) }}" 
+                   class="flex-1 bg-blue-500 text-white py-2 px-3 rounded text-center hover:bg-blue-600">
+                    <i class="fas fa-edit"></i> Edit
+                </a>
+                <button onclick="viewImage('{{ url_for('static', filename='../uploads/' + receipt.image_url) }}')"
+                        class="flex-1 bg-gray-500 text-white py-2 px-3 rounded hover:bg-gray-600">
+                    <i class="fas fa-image"></i> View
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Desktop view (table) -->
+    <div class="hidden md:block bg-white rounded-lg shadow-md overflow-hidden">
+        <table class="w-full">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Receipt #</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Job</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Uploaded By</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for receipt in receipts %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {{ receipt.date.strftime('%Y-%m-%d') if receipt.date else '-' }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {{ receipt.vendor or 'Unknown' }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        ${{ "%.2f"|format(receipt.total or 0) }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {{ receipt.receipt_number or '-' }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {% if receipt.job %}
+                        <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
+                            #{{ receipt.job.job_number }} - {{ receipt.job.customer_name }}
+                        </span>
+                        {% else %}
+                        <span class="text-gray-400">Unassigned</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {% if receipt.upload_method == 'sms' %}
+                        <span class="text-purple-600">
+                            <i class="fas fa-sms mr-1"></i>{{ receipt.phone_number }}
+                        </span>
+                        {% else %}
+                        {{ receipt.uploaded_by }}
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <a href="{{ url_for('review_receipt', receipt_id=receipt.id) }}" 
+                           class="text-blue-600 hover:text-blue-900 mr-3">Edit</a>
+                        <button onclick="viewImage('{{ url_for('static', filename='../uploads/' + receipt.image_url) }}')"
+                                class="text-gray-600 hover:text-gray-900">View</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    {% if not receipts %}
+    <div class="text-center py-12">
+        <i class="fas fa-receipt text-6xl text-gray-300 mb-4"></i>
+        <p class="text-xl text-gray-500">No receipts uploaded yet</p>
+        <a href="{{ url_for('index') }}" 
+           class="mt-4 inline-block bg-blue-600 text-white py-2 px-6 rounded-lg hover:bg-blue-700 transition-colors">
+            Upload Your First Receipt
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Image Modal -->
+<div id="imageModal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center z-50">
+    <div class="relative max-w-4xl max-h-[90vh] p-4">
+        <button onclick="closeModal()" 
+                class="absolute top-2 right-2 text-white bg-black bg-opacity-50 rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-75">
+            <i class="fas fa-times"></i>
+        </button>
+        <img id="modalImage" src="" alt="Receipt" class="max-w-full max-h-full rounded-lg">
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function viewImage(url) {
+        document.getElementById('modalImage').src = url;
+        document.getElementById('imageModal').classList.remove('hidden');
+        document.getElementById('imageModal').classList.add('flex');
+    }
+    
+    function closeModal() {
+        document.getElementById('imageModal').classList.add('hidden');
+        document.getElementById('imageModal').classList.remove('flex');
+    }
+    
+    // Close modal on background click
+    document.getElementById('imageModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeModal();
+        }
+    });
+</script>
+{% endblock %}

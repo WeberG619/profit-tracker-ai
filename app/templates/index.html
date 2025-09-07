@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Receipt - Receipt Processor{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <h2 class="text-2xl md:text-3xl font-bold mb-6 text-gray-800">Upload Receipt/Invoice</h2>
+    
+    <form id="uploadForm" class="bg-white p-6 rounded-lg shadow-md">
+        <!-- Hidden field for preselected job -->
+        {% if preselected_job %}
+        <input type="hidden" id="preselected_job" value="{{ preselected_job }}">
+        <div class="mb-4 p-3 bg-blue-50 rounded-lg">
+            <p class="text-blue-700">
+                <i class="fas fa-info-circle mr-2"></i>
+                Uploading receipt for Job #{{ preselected_job }}
+            </p>
+        </div>
+        {% endif %}
+        
+        <div class="mb-6">
+            <label class="block text-gray-700 text-lg font-bold mb-2" for="uploaded_by">
+                Your Name
+            </label>
+            <input type="text" 
+                   id="uploaded_by" 
+                   name="uploaded_by" 
+                   class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:border-blue-500 mobile-large"
+                   placeholder="Enter your name">
+        </div>
+        
+        <div class="mb-6">
+            <label class="block text-gray-700 text-lg font-bold mb-4">
+                Select Receipt Image
+            </label>
+            
+            <!-- File input with camera capture for mobile -->
+            <div class="space-y-4">
+                <!-- Camera capture button (visible on mobile) -->
+                <label class="md:hidden block">
+                    <input type="file" 
+                           id="cameraInput" 
+                           accept="image/*" 
+                           capture="environment"
+                           class="hidden">
+                    <div class="bg-blue-500 text-white py-4 px-6 rounded-lg text-center cursor-pointer hover:bg-blue-600 transition-colors">
+                        <i class="fas fa-camera text-2xl mb-2"></i>
+                        <p class="text-lg font-semibold">Take Photo</p>
+                    </div>
+                </label>
+                
+                <!-- File upload button -->
+                <label>
+                    <input type="file" 
+                           id="fileInput" 
+                           accept="image/*"
+                           class="hidden">
+                    <div class="bg-green-500 text-white py-4 px-6 rounded-lg text-center cursor-pointer hover:bg-green-600 transition-colors">
+                        <i class="fas fa-file-upload text-2xl mb-2"></i>
+                        <p class="text-lg font-semibold">Choose from Gallery/Files</p>
+                    </div>
+                </label>
+            </div>
+            
+            <!-- Drag and drop area (larger screens) -->
+            <div id="dropZone" 
+                 class="hidden md:block mt-4 border-4 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors">
+                <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-3"></i>
+                <p class="text-lg text-gray-600">Or drag and drop image here</p>
+                <p class="text-sm text-gray-500 mt-2">PNG, JPG, JPEG, GIF, BMP, WEBP (max 16MB)</p>
+            </div>
+        </div>
+        
+        <!-- Preview area -->
+        <div id="preview" class="hidden mb-6">
+            <h3 class="text-lg font-bold mb-2">Preview:</h3>
+            <img id="previewImage" src="" alt="Preview" class="max-w-full h-auto rounded-lg shadow-md">
+        </div>
+        
+        <!-- Upload button -->
+        <button type="submit" 
+                id="uploadBtn"
+                class="w-full bg-blue-600 text-white py-4 px-6 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">
+            <i class="fas fa-upload mr-2"></i>Upload Receipt
+        </button>
+        
+        <!-- Loading indicator -->
+        <div id="loading" class="hidden mt-4 text-center">
+            <i class="fas fa-spinner fa-spin text-4xl text-blue-600"></i>
+            <p class="mt-2 text-lg">Processing receipt...</p>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const fileInput = document.getElementById('fileInput');
+    const cameraInput = document.getElementById('cameraInput');
+    const dropZone = document.getElementById('dropZone');
+    const uploadForm = document.getElementById('uploadForm');
+    const preview = document.getElementById('preview');
+    const previewImage = document.getElementById('previewImage');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const loading = document.getElementById('loading');
+    
+    let selectedFile = null;
+    
+    // Handle file selection
+    function handleFileSelect(file) {
+        if (!file) return;
+        
+        if (!file.type.match('image.*')) {
+            alert('Please select an image file');
+            return;
+        }
+        
+        if (file.size > 16 * 1024 * 1024) {
+            alert('File size must be less than 16MB');
+            return;
+        }
+        
+        selectedFile = file;
+        
+        // Show preview
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewImage.src = e.target.result;
+            preview.classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+    }
+    
+    fileInput.addEventListener('change', (e) => {
+        handleFileSelect(e.target.files[0]);
+    });
+    
+    cameraInput.addEventListener('change', (e) => {
+        handleFileSelect(e.target.files[0]);
+    });
+    
+    // Drag and drop
+    if (dropZone) {
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-blue-500');
+        });
+        
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('border-blue-500');
+        });
+        
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-blue-500');
+            handleFileSelect(e.dataTransfer.files[0]);
+        });
+    }
+    
+    // Handle form submission
+    uploadForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        if (!selectedFile) {
+            alert('Please select a file to upload');
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        formData.append('uploaded_by', document.getElementById('uploaded_by').value || 'Anonymous');
+        
+        uploadBtn.disabled = true;
+        loading.classList.remove('hidden');
+        
+        try {
+            const response = await fetch('/upload', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok && data.success) {
+                window.location.href = data.redirect;
+            } else {
+                alert('Error: ' + (data.error || 'Upload failed'));
+            }
+        } catch (error) {
+            alert('Error uploading file: ' + error.message);
+        } finally {
+            uploadBtn.disabled = false;
+            loading.classList.add('hidden');
+        }
+    });
+</script>
+{% endblock %}
