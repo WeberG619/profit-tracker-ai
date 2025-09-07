@@ -19,21 +19,36 @@
     <nav class="bg-blue-600 text-white p-4 shadow-lg">
         <div class="container mx-auto flex justify-between items-center">
             <h1 class="text-xl md:text-2xl font-bold">
-                <i class="fas fa-receipt mr-2"></i>Receipt Processor
+                <a href="{{ url_for('company_dashboard') }}" class="hover:text-blue-200">
+                    <i class="fas fa-chart-line mr-2"></i>Profit Tracker AI
+                </a>
             </h1>
-            <div class="space-x-2 md:space-x-4">
-                <a href="{{ url_for('dashboard') }}" class="hover:text-blue-200">
-                    <i class="fas fa-chart-line md:mr-1"></i><span class="hidden md:inline">Dashboard</span>
-                </a>
-                <a href="{{ url_for('insights_page') }}" class="hover:text-blue-200">
-                    <i class="fas fa-lightbulb md:mr-1"></i><span class="hidden md:inline">Insights</span>
-                </a>
-                <a href="{{ url_for('index') }}" class="hover:text-blue-200">
-                    <i class="fas fa-upload md:mr-1"></i><span class="hidden md:inline">Upload</span>
-                </a>
-                <a href="{{ url_for('list_receipts') }}" class="hover:text-blue-200">
-                    <i class="fas fa-receipt md:mr-1"></i><span class="hidden md:inline">Receipts</span>
-                </a>
+            <div class="flex items-center space-x-2 md:space-x-4">
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('company_dashboard') }}" class="hover:text-blue-200">
+                        <i class="fas fa-home md:mr-1"></i><span class="hidden md:inline">Dashboard</span>
+                    </a>
+                    <a href="{{ url_for('upload_page') }}" class="hover:text-blue-200">
+                        <i class="fas fa-upload md:mr-1"></i><span class="hidden md:inline">Upload</span>
+                    </a>
+                    <a href="{{ url_for('list_receipts') }}" class="hover:text-blue-200">
+                        <i class="fas fa-list md:mr-1"></i><span class="hidden md:inline">Receipts</span>
+                    </a>
+                    <a href="{{ url_for('insights_page') }}" class="hover:text-blue-200">
+                        <i class="fas fa-lightbulb md:mr-1"></i><span class="hidden md:inline">Insights</span>
+                    </a>
+                    <div class="flex items-center space-x-2 border-l pl-2 ml-2">
+                        <span class="text-sm hidden md:inline">{{ current_user.company.name }}</span>
+                        <a href="{{ url_for('logout') }}" class="hover:text-blue-200">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </a>
+                    </div>
+                {% else %}
+                    <a href="{{ url_for('login') }}" class="hover:text-blue-200">Login</a>
+                    <a href="{{ url_for('register') }}" class="bg-white text-blue-600 px-4 py-2 rounded hover:bg-blue-50">
+                        Start Free Trial
+                    </a>
+                {% endif %}
             </div>
         </div>
     </nav>

@@ -395,15 +395,56 @@ def uploaded_file(filename):
     return send_file(os.path.join(upload_folder, filename))
 
 @app.route('/')
+def landing():
+    """Landing page for non-logged in users, company dashboard for logged in"""
+    if current_user.is_authenticated:
+        return redirect(url_for('company_dashboard'))
+    return render_template('landing.html')
+
+@app.route('/dashboard')
 @login_required
 @company_required
-def index():
+def company_dashboard():
+    """Company-specific dashboard showing stats and recent receipts"""
+    # Get company-specific stats
+    stats = {
+        'total_receipts': Receipt.query.filter_by(company_id=current_user.company_id).count(),
+        'total_expenses': db.session.query(db.func.sum(Receipt.total_amount)).filter_by(company_id=current_user.company_id).scalar() or 0,
+        'active_jobs': Job.query.filter_by(company_id=current_user.company_id, status='active').count(),
+        'month_expenses': 0  # We'll calculate this next
+    }
+    
+    # Calculate this month's expenses
+    from datetime import datetime
+    first_day_of_month = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    stats['month_expenses'] = db.session.query(db.func.sum(Receipt.total_amount)).filter(
+        Receipt.company_id == current_user.company_id,
+        Receipt.created_at >= first_day_of_month
+    ).scalar() or 0
+    
+    # Get recent receipts (last 10)
+    recent_receipts = Receipt.query.filter_by(company_id=current_user.company_id)\
+        .order_by(Receipt.created_at.desc())\
+        .limit(10)\
+        .all()
+    
+    return render_template('company_dashboard.html', 
+                         stats=stats, 
+                         recent_receipts=recent_receipts)
+
+@app.route('/upload')
+@login_required
+@company_required
+def upload_page():
+    """Main upload page for logged in users"""
     # Check if job parameter is passed for pre-selection
     job_number = request.args.get('job')
     return render_template('index.html', preselected_job=job_number)
 
-@app.route('/dashboard')
-def dashboard():
+@app.route('/analytics-dashboard')
+@login_required
+@company_required
+def analytics_dashboard():
     stats = get_dashboard_stats()
     jobs = get_jobs_summary()
     return render_template('dashboard.html', stats=stats, jobs=jobs)
@@ -698,7 +739,7 @@ def list_receipts():
 @login_required
 @company_required
 def get_jobs():
-    jobs = Job.query.filter_by(status='active').all()
+    jobs = Job.query.filter_by(company_id=current_user.company_id, status='active').all()
     return jsonify([{
         'id': job.id,
         'job_number': job.job_number,
@@ -706,26 +747,41 @@ def get_jobs():
     } for job in jobs])
 
 @app.route('/job/<int:job_id>')
+@login_required
+@company_required
 def job_detail(job_id):
-    job = Job.query.get_or_404(job_id)
+    job = Job.query.filter_by(id=job_id, company_id=current_user.company_id).first_or_404()
     timeline = get_job_timeline(job_id)
     return render_template('job_detail.html', job=job, timeline=timeline)
 
+@app.route('/jobs/new')
+@login_required
+@company_required
+def create_job_page():
+    """Display the create job form"""
+    return render_template('create_job.html')
+
 @app.route('/api/jobs/create', methods=['POST'])
+@login_required
+@company_required
 def create_job():
     try:
         data = request.json
         
-        # Check if job number already exists
-        existing_job = Job.query.filter_by(job_number=data.get('job_number')).first()
+        # Check if job number already exists for this company
+        existing_job = Job.query.filter_by(
+            job_number=data.get('job_number'),
+            company_id=current_user.company_id
+        ).first()
         if existing_job:
             return jsonify({'error': 'Job number already exists'}), 400
         
-        # Create new job
+        # Create new job for the current user's company
         job = Job(
             job_number=data.get('job_number'),
             customer_name=data.get('customer_name'),
-            quoted_price=float(data.get('quoted_price', 0))
+            quoted_price=float(data.get('quoted_price', 0)),
+            company_id=current_user.company_id
         )
         db.session.add(job)
         db.session.commit()
@@ -888,7 +944,7 @@ def login():
         if user and user.check_password(password):
             login_user(user, remember=True)
             next_page = request.args.get('next')
-            return redirect(next_page) if next_page else redirect(url_for('index'))
+            return redirect(next_page) if next_page else redirect(url_for('company_dashboard'))
         else:
             flash('Invalid username or password', 'error')
     
@@ -941,7 +997,7 @@ def register():
             
             login_user(user)
             flash('Account created successfully!', 'success')
-            return redirect(url_for('index'))  # Go to index instead of setup
+            return redirect(url_for('company_dashboard'))  # Go to company dashboard
             
         except Exception as e:
             db.session.rollback()
