@@ -5,6 +5,16 @@ from flask import Flask, render_template_string, request, redirect, url_for, ses
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'profit-tracker-secret-2024')
 
+# Add error handlers
+@app.errorhandler(404)
+def not_found(e):
+    return render_template_string('<h1>404 - Page not found</h1><p><a href="/">Go home</a></p>'), 404
+
+@app.errorhandler(500)
+def server_error(e):
+    app.logger.error(f'Server Error: {e}')
+    return render_template_string('<h1>500 - Internal Server Error</h1><p>Something went wrong. <a href="/">Go home</a></p>'), 500
+
 # Store data in memory for now (will be reset on restart)
 users = {'admin': 'admin123'}
 documents = []
@@ -562,6 +572,10 @@ def health():
         'version': '1.0.0',
         'environment': os.environ.get('RENDER', 'local')
     })
+
+@app.route('/test')
+def test():
+    return 'App is working!'
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
