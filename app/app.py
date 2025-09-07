@@ -673,24 +673,53 @@ def review_receipt(receipt_id):
             company_id=current_user.company_id
         ).first_or_404()
         
+        # Get jobs for this company (handle empty case)
         jobs = Job.query.filter_by(company_id=current_user.company_id).all()
         
         # Log receipt data for debugging
         logger.info(f"Receipt data: vendor_name={receipt.vendor_name}, total={receipt.total_amount}, image_path={receipt.image_path}")
-        logger.info(f"Line items count: {len(receipt.line_items)}")
+        logger.info(f"Company {current_user.company_id} has {len(jobs)} jobs")
+        logger.info(f"Line items count: {len(receipt.line_items) if receipt.line_items else 0}")
         
         # Use simple template to avoid errors
         return render_template('review_simple.html', receipt=receipt, jobs=jobs)
     except Exception as e:
         logger.error(f"Error in review_receipt: {str(e)}", exc_info=True)
-        # Return a simple error page instead of redirecting
+        # Check for specific errors
+        import traceback
+        error_trace = traceback.format_exc()
+        
+        # Return a better error page
         return f"""
-        <html><body>
-        <h1>Error Loading Receipt</h1>
-        <p>Error: {str(e)}</p>
-        <p>Receipt ID: {receipt_id}</p>
-        <a href="/">Back to Home</a>
-        </body></html>
+        <html>
+        <head>
+            <title>Error</title>
+            <script src="https://cdn.tailwindcss.com"></script>
+        </head>
+        <body class="bg-gray-100 p-8">
+            <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-6">
+                <h1 class="text-2xl font-bold text-red-600 mb-4">Error Loading Receipt</h1>
+                <p class="text-gray-700 mb-2">We encountered an error while loading this receipt.</p>
+                <div class="bg-red-50 border border-red-200 rounded p-4 mb-4">
+                    <p class="text-sm text-red-800">Error: {str(e)}</p>
+                    <p class="text-xs text-red-600 mt-2">Receipt ID: {receipt_id}</p>
+                </div>
+                <div class="space-x-2">
+                    <a href="{url_for('company_dashboard')}" class="inline-block bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                        Back to Dashboard
+                    </a>
+                    <a href="{url_for('list_receipts')}" class="inline-block bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400">
+                        View All Receipts
+                    </a>
+                </div>
+                <!-- Debug info (remove in production) -->
+                <details class="mt-6">
+                    <summary class="text-sm text-gray-500 cursor-pointer">Technical Details</summary>
+                    <pre class="mt-2 text-xs bg-gray-100 p-2 rounded overflow-auto">{error_trace}</pre>
+                </details>
+            </div>
+        </body>
+        </html>
         """, 500
 
 @app.route('/update_receipt/<int:receipt_id>', methods=['POST'])

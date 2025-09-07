@@ -1,0 +1,13 @@
+profit_tracker_db_user
+
+
+Password
+5Pm9A8jOXPGzgLZsubznh0iKBwoqAJUN
+
+
+Internal Database URL
+postgresql://profit_tracker_db_user:5Pm9A8jOXPGzgLZsubznh0iKBwoqAJUN@dpg-d2ujnnogjchc73adqn1g-a/profit_tracker_db
+
+
+External Database URL
+postgresql://profit_tracker_db_user:5Pm9A8jOXPGzgLZsubznh0iKBwoqAJUN@dpg-d2ujnnogjchc73adqn1g-a.oregon-postgres.render.com/profit_tracker_db
