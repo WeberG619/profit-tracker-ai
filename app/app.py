@@ -32,12 +32,23 @@ db.init_app(app)
 # Initialize login manager
 login_manager.init_app(app)
 
-# Initialize scheduler  
-if not app.config.get('TESTING'):
-    job_scheduler.init_app(app)
+# Initialize scheduler
+try:
+    if not app.config.get('TESTING'):
+        job_scheduler.init_app(app)
+except Exception as e:
+    logger.warning(f"Scheduler initialization failed: {str(e)}")
+    # Continue without scheduler
 
 # Create upload folder if it doesn't exist
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+try:
+    upload_folder = app.config.get('UPLOAD_FOLDER', 'uploads')
+    if not os.path.isabs(upload_folder):
+        upload_folder = os.path.join(os.path.dirname(__file__), '..', upload_folder)
+    os.makedirs(upload_folder, exist_ok=True)
+    app.config['UPLOAD_FOLDER'] = upload_folder
+except Exception as e:
+    logger.warning(f"Could not create upload folder: {str(e)}")
 
 def allowed_file(filename):
     return '.' in filename and \
