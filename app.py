@@ -1588,6 +1588,219 @@ def new_invoice():
     
     return create_base_template('New Invoice', content)
 
+@app.route('/documents')
+def documents():
+    if not session.get('username'):
+        return redirect(url_for('login'))
+    
+    # Combine all documents (both income and expense)
+    all_docs = sorted(documents, key=lambda x: x['date'], reverse=True)
+    
+    content = '''
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">All Documents</h2>
+            <a href="/upload" class="btn btn-primary">+ Upload Document</a>
+        </div>
+        
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Vendor/Customer</th>
+                        <th>Description</th>
+                        <th>Category</th>
+                        <th>Job</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+    '''
+    
+    for doc in all_docs:
+        doc_type = doc['type'].title()
+        color = 'var(--success)' if doc['type'] == 'income' else 'var(--danger)'
+        sign = '+' if doc['type'] == 'income' else '-'
+        type_badge = 'badge-success' if doc['type'] == 'income' else 'badge-danger'
+        
+        job = next((j for j in jobs if str(j['id']) == doc.get('job_id')), None)
+        job_name = f"{job['number']} - {job['customer']}" if job else '-'
+        
+        content += f'''
+                    <tr>
+                        <td>{doc['date']}</td>
+                        <td><span class="badge {type_badge}">{doc_type}</span></td>
+                        <td>{doc['vendor']}</td>
+                        <td>{doc.get('description', '-')}</td>
+                        <td><span class="badge badge-info">{doc.get('category', 'Other')}</span></td>
+                        <td>{job_name}</td>
+                        <td style="color: {color};">{sign}${doc['amount']:,.2f}</td>
+                    </tr>
+        '''
+    
+    if not all_docs:
+        content += '''
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 2rem; color: var(--secondary);">
+                            No documents uploaded yet. Start by <a href="/upload">uploading your first document</a>.
+                        </td>
+                    </tr>
+        '''
+    
+    content += '''
+                </tbody>
+            </table>
+        </div>
+    </div>
+    '''
+    
+    return create_base_template('Documents', content)
+
+@app.route('/jobs/<int:job_id>')
+def job_detail(job_id):
+    if not session.get('username'):
+        return redirect(url_for('login'))
+    
+    job = next((j for j in jobs if j['id'] == job_id), None)
+    if not job:
+        return 'Job not found', 404
+    
+    # Calculate job metrics
+    job_expenses = sum(d['amount'] for d in documents if d['type'] == 'expense' and d.get('job_id') == str(job_id))
+    job_revenue = sum(d['amount'] for d in documents if d['type'] == 'income' and d.get('job_id') == str(job_id))
+    job_profit = job_revenue - job_expenses
+    profit_margin = (job_profit / job['quoted_price'] * 100) if job['quoted_price'] > 0 else 0
+    
+    # Get job documents
+    job_docs = [d for d in documents if d.get('job_id') == str(job_id)]
+    
+    content = f'''
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Job Details: {job['number']}</h2>
+            <a href="/jobs" class="btn btn-secondary">← Back to Jobs</a>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+            <div>
+                <h3 style="margin-bottom: 1rem;">Job Information</h3>
+                <table style="width: 100%;">
+                    <tr>
+                        <td style="padding: 0.5rem 0; font-weight: 600;">Customer:</td>
+                        <td style="padding: 0.5rem 0;">{job['customer']}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.5rem 0; font-weight: 600;">Description:</td>
+                        <td style="padding: 0.5rem 0;">{job['description']}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.5rem 0; font-weight: 600;">Status:</td>
+                        <td style="padding: 0.5rem 0;">
+                            <span class="badge {'badge-success' if job['status'] == 'Completed' else 'badge-warning' if job['status'] == 'In Progress' else 'badge-info'}">{job['status']}</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.5rem 0; font-weight: 600;">Start Date:</td>
+                        <td style="padding: 0.5rem 0;">{job.get('start_date', '-')}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.5rem 0; font-weight: 600;">Est. End Date:</td>
+                        <td style="padding: 0.5rem 0;">{job.get('estimated_end', '-')}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.5rem 0; font-weight: 600;">Progress:</td>
+                        <td style="padding: 0.5rem 0;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <div class="progress-bar" style="width: 200px;">
+                                    <div class="progress-fill" style="width: {job['progress']}%;"></div>
+                                </div>
+                                <span>{job['progress']}%</span>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            
+            <div>
+                <h3 style="margin-bottom: 1rem;">Financial Summary</h3>
+                <table style="width: 100%;">
+                    <tr>
+                        <td style="padding: 0.5rem 0; font-weight: 600;">Quoted Price:</td>
+                        <td style="padding: 0.5rem 0; text-align: right;">${job['quoted_price']:,.2f}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.5rem 0; font-weight: 600;">Revenue Collected:</td>
+                        <td style="padding: 0.5rem 0; text-align: right; color: var(--success);">${job_revenue:,.2f}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.5rem 0; font-weight: 600;">Expenses:</td>
+                        <td style="padding: 0.5rem 0; text-align: right; color: var(--danger);">-${job_expenses:,.2f}</td>
+                    </tr>
+                    <tr style="border-top: 2px solid var(--border);">
+                        <td style="padding: 0.5rem 0; font-weight: 600;">Net Profit:</td>
+                        <td style="padding: 0.5rem 0; text-align: right; font-weight: 600; color: {'var(--success)' if job_profit >= 0 else 'var(--danger)'};">${job_profit:,.2f}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.5rem 0; font-weight: 600;">Profit Margin:</td>
+                        <td style="padding: 0.5rem 0; text-align: right; font-weight: 600;">{profit_margin:.1f}%</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        
+        <div style="margin-bottom: 2rem;">
+            <h3>Notes</h3>
+            <p style="background: var(--light); padding: 1rem; border-radius: 0.5rem;">{job.get('notes', 'No notes added.')}</p>
+        </div>
+        
+        <h3 style="margin-bottom: 1rem;">Related Documents</h3>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Description</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+    '''
+    
+    if job_docs:
+        for doc in sorted(job_docs, key=lambda x: x['date'], reverse=True):
+            color = 'var(--success)' if doc['type'] == 'income' else 'var(--danger)'
+            sign = '+' if doc['type'] == 'income' else '-'
+            type_badge = 'badge-success' if doc['type'] == 'income' else 'badge-danger'
+            
+            content += f'''
+                        <tr>
+                            <td>{doc['date']}</td>
+                            <td><span class="badge {type_badge}">{doc['type'].title()}</span></td>
+                            <td>{doc.get('description', doc['vendor'])}</td>
+                            <td style="color: {color};">{sign}${doc['amount']:,.2f}</td>
+                        </tr>
+            '''
+    else:
+        content += '''
+                    <tr>
+                        <td colspan="4" style="text-align: center; padding: 2rem; color: var(--secondary);">
+                            No documents for this job yet.
+                        </td>
+                    </tr>
+        '''
+    
+    content += '''
+                </tbody>
+            </table>
+        </div>
+    </div>
+    '''
+    
+    return create_base_template(f'Job: {job["number"]}', content)
+
 @app.route('/logout')
 def logout():
     session.pop('username', None)
