@@ -11,8 +11,9 @@ app.secret_key = os.environ.get('SECRET_KEY', 'profit-tracker-secret-2024')
 users = {'admin': 'admin123'}
 documents = []
 jobs = []
+uploaded_files = []  # Store uploaded file metadata
 
-# Sample data for demo with more realistic data
+# Sample data for testing - as requested by user
 def init_sample_data():
     global jobs, documents
     
@@ -20,53 +21,79 @@ def init_sample_data():
     jobs = [
         {
             'id': 1,
-            'number': 'JOB-001',
-            'customer': 'Smith Construction',
-            'description': 'Kitchen Renovation - Complete remodel including cabinets, countertops, and appliances',
-            'quoted_price': 25000,
+            'number': 'JOB-2024-001',
+            'customer': 'Thompson Kitchen Remodel',
+            'description': 'Complete kitchen renovation including cabinets, countertops, backsplash, and appliances',
+            'quoted_price': 32500,
             'status': 'In Progress',
-            'start_date': '2024-01-15',
-            'estimated_end': '2024-02-15',
-            'progress': 65,
-            'health': 'healthy',  # healthy, warning, critical
-            'notes': 'Cabinets installed, waiting for countertops'
+            'start_date': '2024-01-08',
+            'estimated_end': '2024-02-20',
+            'progress': 75,
+            'health': 'healthy',
+            'notes': 'Cabinets installed, countertops arriving next week'
         },
         {
             'id': 2,
-            'number': 'JOB-002',
-            'customer': 'Johnson Residence',
-            'description': 'Bathroom Remodel - Master bath complete renovation',
-            'quoted_price': 15000,
-            'status': 'Completed',
-            'start_date': '2023-12-01',
-            'estimated_end': '2023-12-20',
-            'progress': 100,
-            'health': 'healthy',
-            'notes': 'Completed on time, customer very satisfied'
+            'number': 'JOB-2024-002',
+            'customer': 'Martinez Bathroom',
+            'description': 'Master bathroom remodel - full gut renovation with luxury fixtures',
+            'quoted_price': 18500,
+            'status': 'In Progress',
+            'start_date': '2024-01-15',
+            'estimated_end': '2024-02-10',
+            'progress': 40,
+            'health': 'warning',
+            'notes': 'Plumbing rough-in complete, waiting on special order vanity'
         },
         {
             'id': 3,
-            'number': 'JOB-003',
-            'customer': 'Davis Commercial',
-            'description': 'Office Build-out - 2500 sq ft office space',
+            'number': 'JOB-2023-087',
+            'customer': 'Wilson Deck Project',
+            'description': 'Build 16x20 composite deck with pergola and built-in seating',
+            'quoted_price': 22000,
+            'status': 'Completed',
+            'start_date': '2023-11-01',
+            'estimated_end': '2023-11-30',
+            'progress': 100,
+            'health': 'healthy',
+            'notes': 'Project completed on time, customer very happy'
+        },
+        {
+            'id': 4,
+            'number': 'JOB-2024-003',
+            'customer': 'Chen Basement Finishing',
+            'description': 'Finish 1200 sq ft basement with bedroom, bathroom, and rec room',
             'quoted_price': 45000,
             'status': 'Quoted',
-            'start_date': '2024-03-01',
-            'estimated_end': '2024-04-15',
+            'start_date': '2024-02-01',
+            'estimated_end': '2024-03-15',
             'progress': 0,
-            'health': 'warning',
-            'notes': 'Awaiting customer approval - follow up needed'
+            'health': 'healthy',
+            'notes': 'Waiting for permit approval'
         }
     ]
     
-    # More realistic document data
+    # Sample documents with realistic data
     documents = [
-        {'id': 1, 'type': 'expense', 'job_id': '1', 'vendor': 'Home Depot', 'amount': 3500, 'date': '2024-01-20', 'description': 'Kitchen cabinets', 'category': 'Materials'},
-        {'id': 2, 'type': 'expense', 'job_id': '1', 'vendor': 'Lowes', 'amount': 1200, 'date': '2024-01-22', 'description': 'Plumbing fixtures', 'category': 'Materials'},
-        {'id': 3, 'type': 'income', 'job_id': '1', 'vendor': 'Smith Construction', 'amount': 12500, 'date': '2024-01-15', 'description': '50% deposit', 'category': 'Payment'},
-        {'id': 4, 'type': 'expense', 'job_id': '2', 'vendor': 'Tile Shop', 'amount': 2800, 'date': '2023-12-05', 'description': 'Bathroom tiles and grout', 'category': 'Materials'},
-        {'id': 5, 'type': 'expense', 'job_id': '2', 'vendor': 'Subcontractor - Mike', 'amount': 3000, 'date': '2023-12-10', 'description': 'Plumbing work', 'category': 'Labor'},
-        {'id': 6, 'type': 'income', 'job_id': '2', 'vendor': 'Johnson Residence', 'amount': 15000, 'date': '2023-12-20', 'description': 'Final payment', 'category': 'Payment'},
+        # Thompson Kitchen expenses
+        {'id': 1, 'type': 'expense', 'job_id': '1', 'vendor': 'Home Depot', 'amount': 4250, 'date': '2024-01-10', 'description': 'Kitchen cabinets - shaker white', 'category': 'Materials'},
+        {'id': 2, 'type': 'expense', 'job_id': '1', 'vendor': 'Ferguson', 'amount': 2800, 'date': '2024-01-12', 'description': 'Kohler sink and faucet package', 'category': 'Materials'},
+        {'id': 3, 'type': 'income', 'job_id': '1', 'vendor': 'Thompson Kitchen Remodel', 'amount': 16250, 'date': '2024-01-08', 'description': '50% deposit', 'category': 'Payment'},
+        {'id': 4, 'type': 'expense', 'job_id': '1', 'vendor': 'Mike Rodriguez', 'amount': 2400, 'date': '2024-01-18', 'description': 'Cabinet installation labor', 'category': 'Labor'},
+        
+        # Martinez Bathroom expenses
+        {'id': 5, 'type': 'expense', 'job_id': '2', 'vendor': 'Tile Shop', 'amount': 1850, 'date': '2024-01-16', 'description': 'Porcelain tile and grout', 'category': 'Materials'},
+        {'id': 6, 'type': 'expense', 'job_id': '2', 'vendor': 'ProPlumb LLC', 'amount': 3200, 'date': '2024-01-20', 'description': 'Plumbing rough-in and fixtures', 'category': 'Subcontractor'},
+        {'id': 7, 'type': 'income', 'job_id': '2', 'vendor': 'Martinez Bathroom', 'amount': 9250, 'date': '2024-01-15', 'description': '50% deposit', 'category': 'Payment'},
+        
+        # Wilson Deck (completed)
+        {'id': 8, 'type': 'expense', 'job_id': '3', 'vendor': 'Lumber Liquidators', 'amount': 8500, 'date': '2023-11-02', 'description': 'Composite decking and framing lumber', 'category': 'Materials'},
+        {'id': 9, 'type': 'expense', 'job_id': '3', 'vendor': 'County Permits', 'amount': 350, 'date': '2023-10-28', 'description': 'Building permit', 'category': 'Permits'},
+        {'id': 10, 'type': 'income', 'job_id': '3', 'vendor': 'Wilson Deck Project', 'amount': 22000, 'date': '2023-11-30', 'description': 'Final payment', 'category': 'Payment'},
+        
+        # General expenses not tied to specific jobs
+        {'id': 11, 'type': 'expense', 'job_id': '', 'vendor': 'State Farm', 'amount': 450, 'date': '2024-01-01', 'description': 'Monthly liability insurance', 'category': 'Other'},
+        {'id': 12, 'type': 'expense', 'job_id': '', 'vendor': 'DeWalt Tools', 'amount': 899, 'date': '2024-01-05', 'description': 'New miter saw', 'category': 'Equipment'},
     ]
 
 init_sample_data()
@@ -857,6 +884,91 @@ def create_base_template(title, content, show_nav=True, page_type='default'):
         {content}
     </div>
     
+    <!-- Quick Add Modal -->
+    <div id="quickAddModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+        <div style="background: white; padding: 2rem; border-radius: 1rem; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; position: relative;">
+            <button onclick="closeQuickAdd()" style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--secondary);">&times;</button>
+            
+            <h2 style="margin-bottom: 1.5rem;">Quick Add</h2>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+                <a href="/upload?type=expense" class="action-card" style="padding: 1.5rem; text-decoration: none;">
+                    <div class="action-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                            <path d="M16 3h-8v4h8z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="action-title">Add Expense</h3>
+                    <p class="action-desc">Record a cost</p>
+                </a>
+                
+                <a href="/upload?type=income" class="action-card" style="padding: 1.5rem; text-decoration: none;">
+                    <div class="action-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                        </svg>
+                    </div>
+                    <h3 class="action-title">Add Income</h3>
+                    <p class="action-desc">Record payment</p>
+                </a>
+                
+                <a href="/jobs/new" class="action-card" style="padding: 1.5rem; text-decoration: none;">
+                    <div class="action-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 7h-9a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"></path>
+                            <path d="M5 3h9a2 2 0 0 1 2 2v2H7a2 2 0 0 0-2 2v8H3a1 1 0 0 1-1-1V5a2 2 0 0 1 2-2z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="action-title">New Job</h3>
+                    <p class="action-desc">Start project</p>
+                </a>
+            </div>
+            
+            <div style="border-top: 1px solid var(--border); padding-top: 1.5rem;">
+                <h3 style="margin-bottom: 1rem;">Quick Expense Entry</h3>
+                <form id="quickAddForm" onsubmit="quickAddSubmit(event)" method="POST" action="/api/quick-add">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="form-group">
+                            <label>Type</label>
+                            <select name="type" required>
+                                <option value="expense">Expense</option>
+                                <option value="income">Income</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Amount</label>
+                            <input type="number" name="amount" step="0.01" required placeholder="0.00">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Vendor/Customer</label>
+                            <input type="text" name="vendor" required placeholder="e.g., Home Depot">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Category</label>
+                            <select name="category" required>
+                                <option value="Materials">Materials</option>
+                                <option value="Labor">Labor</option>
+                                <option value="Equipment">Equipment</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Description (Optional)</label>
+                        <input type="text" name="description" placeholder="Quick note...">
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Save Quick Entry</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
     <script>
         // Add smooth transitions
         document.addEventListener('DOMContentLoaded', function() {{
@@ -884,8 +996,38 @@ def create_base_template(title, content, show_nav=True, page_type='default'):
         }});
         
         function showQuickAdd() {{
-            // Placeholder for quick add modal
-            alert('Quick Add feature coming soon!');
+            const modal = document.getElementById('quickAddModal');
+            modal.style.display = 'flex';
+        }}
+        
+        function closeQuickAdd() {{
+            const modal = document.getElementById('quickAddModal');
+            modal.style.display = 'none';
+            document.getElementById('quickAddForm').reset();
+        }}
+        
+        // Quick Add form submission
+        function quickAddSubmit(e) {{
+            e.preventDefault();
+            const form = e.target;
+            const formData = new FormData(form);
+            
+            fetch('/api/quick-add', {{
+                method: 'POST',
+                body: formData
+            }})
+            .then(response => response.json())
+            .then(data => {{
+                if (data.success) {{
+                    closeQuickAdd();
+                    window.location.reload();
+                }} else {{
+                    alert('Error: ' + data.message);
+                }}
+            }})
+            .catch(error => {{
+                alert('Error saving entry');
+            }});
         }}
     </script>
 </body>
@@ -1773,6 +1915,20 @@ def upload():
         return redirect(url_for('login'))
     
     if request.method == 'POST':
+        # Handle file upload
+        file_info = None
+        if 'receipt_file' in request.files:
+            file = request.files['receipt_file']
+            if file and file.filename:
+                # Store file metadata (in production, you'd save the actual file)
+                file_info = {
+                    'filename': file.filename,
+                    'size': len(file.read()),
+                    'type': file.content_type
+                }
+                file.seek(0)  # Reset file pointer
+                uploaded_files.append(file_info)
+        
         doc = {
             'id': len(documents) + 1,
             'type': request.form.get('doc_type'),
@@ -1781,7 +1937,8 @@ def upload():
             'date': request.form.get('date'),
             'description': request.form.get('description'),
             'category': request.form.get('category'),
-            'job_id': request.form.get('job_id')
+            'job_id': request.form.get('job_id'),
+            'file_info': file_info
         }
         documents.append(doc)
         return redirect(url_for('dashboard'))
@@ -1791,15 +1948,107 @@ def upload():
         job_options += f'<option value="{job["id"]}">{job["number"]} - {job["customer"]}</option>'
     
     content = f'''
-    <div class="card" style="max-width: 800px; margin: 0 auto;">
+    <style>
+        .upload-zone {{
+            border: 3px dashed var(--primary);
+            border-radius: 1rem;
+            padding: 3rem;
+            text-align: center;
+            background: var(--primary-light);
+            margin-bottom: 2rem;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }}
+        
+        .upload-zone:hover {{
+            background: rgba(94, 58, 238, 0.1);
+            border-color: var(--primary-dark);
+        }}
+        
+        .upload-zone.dragover {{
+            background: rgba(94, 58, 238, 0.2);
+            border-color: var(--primary-dark);
+            transform: scale(1.02);
+        }}
+        
+        .file-input {{
+            display: none;
+        }}
+        
+        .upload-button {{
+            display: inline-block;
+            padding: 0.875rem 2rem;
+            background: var(--primary);
+            color: white;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin-top: 1rem;
+        }}
+        
+        .upload-button:hover {{
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }}
+        
+        .file-preview {{
+            display: none;
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: white;
+            border-radius: 0.75rem;
+            border: 1px solid var(--border);
+        }}
+        
+        .file-preview.active {{
+            display: block;
+        }}
+        
+        .preview-image {{
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 0.5rem;
+            margin: 0 auto 1rem;
+            display: block;
+        }}
+        
+        .camera-icon {{
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }}
+    </style>
+    
+    <div class="card" style="max-width: 900px; margin: 0 auto;">
         <div class="card-header">
             <h2 class="card-title">Capture Receipt</h2>
         </div>
         <div class="card-body">
-            <form method="POST">
+            <form method="POST" enctype="multipart/form-data" id="uploadForm">
+                <!-- File Upload Zone -->
+                <div class="upload-zone" id="uploadZone">
+                    <div class="camera-icon">📸</div>
+                    <h3 style="margin-bottom: 0.5rem;">Upload Receipt or Invoice</h3>
+                    <p style="color: var(--secondary); margin-bottom: 1rem;">
+                        Drag & drop your file here or click to browse<br>
+                        <small>Supports JPEG, PNG, PDF (Max 10MB)</small>
+                    </p>
+                    <label for="receiptFile" class="upload-button">
+                        Choose File
+                    </label>
+                    <input type="file" id="receiptFile" name="receipt_file" class="file-input" 
+                           accept="image/jpeg,image/jpg,image/png,application/pdf">
+                    
+                    <div class="file-preview" id="filePreview">
+                        <img class="preview-image" id="previewImage" style="display: none;">
+                        <div id="previewInfo"></div>
+                    </div>
+                </div>
+                
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
                     <div class="form-group">
-                        <label>Document Type</label>
+                        <label>Document Type *</label>
                         <select name="doc_type" required>
                             <option value="">Select type...</option>
                             <option value="expense">Expense Receipt</option>
@@ -1816,22 +2065,22 @@ def upload():
                     </div>
                     
                     <div class="form-group">
-                        <label>Vendor/Customer</label>
+                        <label>Vendor/Customer *</label>
                         <input type="text" name="vendor" required placeholder="e.g., Home Depot, Smith Construction">
                     </div>
                     
                     <div class="form-group">
-                        <label>Amount</label>
+                        <label>Amount *</label>
                         <input type="number" name="amount" step="0.01" required placeholder="0.00">
                     </div>
                     
                     <div class="form-group">
-                        <label>Date</label>
+                        <label>Date *</label>
                         <input type="date" name="date" value="{datetime.now().strftime('%Y-%m-%d')}" required>
                     </div>
                     
                     <div class="form-group">
-                        <label>Category</label>
+                        <label>Category *</label>
                         <select name="category" required>
                             <option value="">Select category...</option>
                             <option value="Materials">Materials</option>
@@ -1854,14 +2103,13 @@ def upload():
                     <div class="ai-insights-header">
                         <div class="ai-icon">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                                <circle cx="12" cy="13" r="4"></circle>
+                                <path d="M9 11H3v10h6V11zm4-8H7v18h6V3zm4 4h-6v14h6V7zm4 2h-6v12h6V9z"/>
                             </svg>
                         </div>
-                        <h3 class="ai-insights-title">AI Receipt Capture</h3>
+                        <h3 class="ai-insights-title">AI Processing Status</h3>
                     </div>
-                    <div class="ai-insights-content">
-                        Coming soon: Snap a photo and our AI will automatically extract vendor, amount, and categorize the expense for you!
+                    <div class="ai-insights-content" id="aiStatus">
+                        Ready to process your receipt. Upload an image and our AI will help extract key information.
                     </div>
                 </div>
                 
@@ -1872,6 +2120,101 @@ def upload():
             </form>
         </div>
     </div>
+    
+    <script>
+        // File upload handling
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('receiptFile');
+        const filePreview = document.getElementById('filePreview');
+        const previewImage = document.getElementById('previewImage');
+        const previewInfo = document.getElementById('previewInfo');
+        const aiStatus = document.getElementById('aiStatus');
+        
+        // Click to upload
+        uploadZone.addEventListener('click', (e) => {{
+            if (e.target.closest('.upload-button')) {{
+                fileInput.click();
+            }}
+        }});
+        
+        // Drag and drop
+        uploadZone.addEventListener('dragover', (e) => {{
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        }});
+        
+        uploadZone.addEventListener('dragleave', () => {{
+            uploadZone.classList.remove('dragover');
+        }});
+        
+        uploadZone.addEventListener('drop', (e) => {{
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {{
+                handleFile(files[0]);
+            }}
+        }});
+        
+        // File input change
+        fileInput.addEventListener('change', (e) => {{
+            if (e.target.files.length > 0) {{
+                handleFile(e.target.files[0]);
+            }}
+        }});
+        
+        function handleFile(file) {{
+            // Validate file type
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+            if (!validTypes.includes(file.type)) {{
+                alert('Please upload a JPEG, PNG, or PDF file.');
+                return;
+            }}
+            
+            // Validate file size (10MB max)
+            if (file.size > 10 * 1024 * 1024) {{
+                alert('File size must be less than 10MB.');
+                return;
+            }}
+            
+            // Update file input
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            fileInput.files = dataTransfer.files;
+            
+            // Show preview
+            filePreview.classList.add('active');
+            
+            if (file.type.startsWith('image/')) {{
+                const reader = new FileReader();
+                reader.onload = (e) => {{
+                    previewImage.src = e.target.result;
+                    previewImage.style.display = 'block';
+                }};
+                reader.readAsDataURL(file);
+            }} else {{
+                previewImage.style.display = 'none';
+            }}
+            
+            // Update preview info
+            const fileSize = (file.size / 1024).toFixed(1);
+            previewInfo.innerHTML = `
+                <strong>File:</strong> ${{file.name}}<br>
+                <strong>Type:</strong> ${{file.type}}<br>
+                <strong>Size:</strong> ${{fileSize}} KB
+            `;
+            
+            // Update AI status
+            aiStatus.innerHTML = `
+                <div style="color: var(--primary);">
+                    <strong>AI Analysis Ready</strong><br>
+                    File uploaded successfully. In the full version, AI will automatically extract:
+                    vendor name, amount, date, and categorize the expense.
+                </div>
+            `;
+        }}
+    </script>
     '''
     
     return create_base_template('Capture Receipt', content, page_type='expenses')
@@ -2585,6 +2928,27 @@ def reports():
     '''
     
     return create_base_template('Analytics', content, page_type='reports')
+
+@app.route('/api/quick-add', methods=['POST'])
+def quick_add_api():
+    if not session.get('username'):
+        return jsonify({'success': False, 'message': 'Not authenticated'}), 401
+    
+    try:
+        doc = {
+            'id': len(documents) + 1,
+            'type': request.form.get('type'),
+            'vendor': request.form.get('vendor'),
+            'amount': float(request.form.get('amount', 0)),
+            'date': datetime.now().strftime('%Y-%m-%d'),
+            'description': request.form.get('description', ''),
+            'category': request.form.get('category'),
+            'job_id': None
+        }
+        documents.append(doc)
+        return jsonify({'success': True, 'message': 'Entry added successfully'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 400
 
 @app.route('/documents')
 def documents_page():
