@@ -222,6 +222,82 @@ def test_pdf_processing():
             'traceback': traceback.format_exc()
         }), 500
 
+@app.route('/upload-debug', methods=['POST'])
+@login_required
+@company_required
+def upload_debug():
+    """Debug version of upload with detailed error tracking"""
+    import traceback
+    
+    try:
+        # Step 1: Check request
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file in request', 'step': 1}), 400
+            
+        file = request.files['file']
+        if not file or file.filename == '':
+            return jsonify({'error': 'No file selected', 'step': 2}), 400
+            
+        # Step 2: Check file type
+        if not allowed_file(file.filename):
+            return jsonify({'error': f'Invalid file type: {file.filename}', 'step': 3}), 400
+            
+        # Step 3: Prepare filename
+        filename = secure_filename(file.filename)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"{timestamp}_{filename}"
+        
+        # Step 4: Save file
+        upload_folder = app.config.get('UPLOAD_FOLDER')
+        filepath = os.path.join(upload_folder, filename)
+        
+        try:
+            file.save(filepath)
+        except Exception as e:
+            return jsonify({'error': f'File save failed: {str(e)}', 'step': 4, 'trace': traceback.format_exc()}), 500
+            
+        # Step 5: Create receipt record
+        try:
+            receipt = Receipt(
+                company_id=current_user.company_id,
+                image_path=filename,
+                uploaded_by=current_user.username
+            )
+            db.session.add(receipt)
+            db.session.commit()
+        except Exception as e:
+            return jsonify({'error': f'Database error: {str(e)}', 'step': 5, 'trace': traceback.format_exc()}), 500
+            
+        # Step 6: Process image (if API key exists)
+        if os.getenv('ANTHROPIC_API_KEY'):
+            try:
+                extracted_data = process_receipt_image(filepath)
+                receipt.vendor_name = extracted_data.get('vendor')
+                receipt.total_amount = extracted_data.get('total')
+                receipt.date = datetime.strptime(extracted_data.get('date'), '%Y-%m-%d').date() if extracted_data.get('date') else None
+                receipt.extracted_data = extracted_data
+                db.session.commit()
+            except Exception as e:
+                return jsonify({
+                    'error': f'OCR processing error: {str(e)}', 
+                    'step': 6, 
+                    'trace': traceback.format_exc(),
+                    'receipt_id': receipt.id
+                }), 500
+        
+        return jsonify({
+            'success': True,
+            'receipt_id': receipt.id,
+            'redirect': url_for('review_receipt', receipt_id=receipt.id)
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'error': f'Unexpected error: {str(e)}',
+            'step': 0,
+            'trace': traceback.format_exc()
+        }), 500
+
 @app.route('/')
 @login_required
 @company_required
@@ -235,6 +311,44 @@ def dashboard():
     stats = get_dashboard_stats()
     jobs = get_jobs_summary()
     return render_template('dashboard.html', stats=stats, jobs=jobs)
+
+@app.route('/debug-upload-form')
+@login_required
+@company_required
+def debug_upload_form():
+    """Debug upload form that uses the debug endpoint"""
+    return '''
+    <html><body>
+    <h2>Debug Upload Form</h2>
+    <p>This will show detailed error information</p>
+    <form id="debugForm">
+        <input type="file" id="file" accept=".pdf,.jpg,.png" required>
+        <button type="submit">Debug Upload</button>
+    </form>
+    <pre id="result"></pre>
+    <script>
+    document.getElementById('debugForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const formData = new FormData();
+        formData.append('file', document.getElementById('file').files[0]);
+        
+        try {
+            const response = await fetch('/upload-debug', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+            if (data.success) {
+                setTimeout(() => window.location.href = data.redirect, 2000);
+            }
+        } catch (error) {
+            document.getElementById('result').textContent = 'Network error: ' + error.message;
+        }
+    };
+    </script>
+    </body></html>
+    '''
 
 @app.route('/upload-test', methods=['GET', 'POST'])
 @login_required
