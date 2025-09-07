@@ -62,6 +62,8 @@ def init_db():
         db.session.commit()
 
 @app.route('/')
+@login_required
+@company_required
 def index():
     # Check if job parameter is passed for pre-selection
     job_number = request.args.get('job')
@@ -74,6 +76,8 @@ def dashboard():
     return render_template('dashboard.html', stats=stats, jobs=jobs)
 
 @app.route('/upload', methods=['POST'])
+@login_required
+@company_required
 def upload_file():
     try:
         if 'file' not in request.files:
@@ -92,7 +96,8 @@ def upload_file():
             
             # Create receipt record
             receipt = Receipt(
-                image_url=filename,
+                company_id=current_user.company_id,
+                image_path=filename,
                 uploaded_by=request.form.get('uploaded_by', 'Anonymous')
             )
             db.session.add(receipt)
@@ -103,8 +108,8 @@ def upload_file():
                 extracted_data = process_receipt_image(filepath)
                 
                 # Update receipt with extracted data
-                receipt.vendor = extracted_data.get('vendor')
-                receipt.total = extracted_data.get('total')
+                receipt.vendor_name = extracted_data.get('vendor')
+                receipt.total_amount = extracted_data.get('total')
                 receipt.date = datetime.strptime(extracted_data.get('date'), '%Y-%m-%d').date() if extracted_data.get('date') else None
                 receipt.receipt_number = extracted_data.get('receipt_number')
                 receipt.extracted_data = extracted_data
@@ -139,19 +144,23 @@ def upload_file():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/review/<int:receipt_id>')
+@login_required
+@company_required
 def review_receipt(receipt_id):
-    receipt = Receipt.query.get_or_404(receipt_id)
-    jobs = Job.query.filter_by(status='active').all()
+    receipt = Receipt.query.filter_by(id=receipt_id, company_id=current_user.company_id).first_or_404()
+    jobs = Job.query.filter_by(status='active', company_id=current_user.company_id).all()
     return render_template('review.html', receipt=receipt, jobs=jobs)
 
 @app.route('/update_receipt/<int:receipt_id>', methods=['POST'])
+@login_required
+@company_required
 def update_receipt(receipt_id):
     try:
         receipt = Receipt.query.get_or_404(receipt_id)
         data = request.json
         
-        receipt.vendor = data.get('vendor')
-        receipt.total = float(data.get('total')) if data.get('total') else None
+        receipt.vendor_name = data.get('vendor')
+        receipt.total_amount = float(data.get('total')) if data.get('total') else None
         receipt.date = datetime.strptime(data.get('date'), '%Y-%m-%d').date() if data.get('date') else None
         receipt.receipt_number = data.get('receipt_number')
         receipt.job_id = int(data.get('job_id')) if data.get('job_id') else None
@@ -178,11 +187,15 @@ def update_receipt(receipt_id):
         return jsonify({'error': str(e)}), 500
 
 @app.route('/receipts')
+@login_required
+@company_required
 def list_receipts():
-    receipts = Receipt.query.order_by(Receipt.created_at.desc()).all()
+    receipts = Receipt.query.filter_by(company_id=current_user.company_id).order_by(Receipt.created_at.desc()).all()
     return render_template('list.html', receipts=receipts)
 
 @app.route('/api/jobs')
+@login_required
+@company_required
 def get_jobs():
     jobs = Job.query.filter_by(status='active').all()
     return jsonify([{
@@ -475,7 +488,7 @@ def receive_sms():
                 
                 # Create receipt record
                 receipt = Receipt(
-                    image_url=filename,
+                    image_path=filename,
                     uploaded_by=from_number,
                     phone_number=from_number,
                     upload_method='sms',
@@ -507,8 +520,8 @@ def receive_sms():
                     
                     db.session.commit()
                     
-                    if receipt.total:
-                        total_amount += receipt.total
+                    if receipt.total_amount:
+                        total_amount += receipt.total_amount or 0
                     receipts_processed += 1
                     
                 except Exception as e:

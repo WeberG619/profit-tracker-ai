@@ -35,9 +35,9 @@ class User(db.Model, UserMixin):
 class Receipt(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
-    image_url = db.Column(db.String(500), nullable=False)
-    vendor = db.Column(db.String(200))
-    total = db.Column(db.Float)
+    image_path = db.Column(db.String(500), nullable=False)
+    vendor_name = db.Column(db.String(200))
+    total_amount = db.Column(db.Float)
     date = db.Column(db.Date)
     receipt_number = db.Column(db.String(100))
     extracted_data = db.Column(db.JSON)

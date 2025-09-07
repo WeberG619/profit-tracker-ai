@@ -55,11 +55,11 @@ def get_job_timeline(job_id):
     running_total = 0
     
     for receipt in receipts:
-        running_total += receipt.total or 0
+        running_total += receipt.total_amount or 0
         timeline.append({
             'date': receipt.created_at.strftime('%Y-%m-%d'),
             'vendor': receipt.vendor or 'Unknown',
-            'amount': receipt.total or 0,
+            'amount': receipt.total_amount or 0,
             'running_total': running_total,
             'id': receipt.id
         })
@@ -120,7 +120,7 @@ def get_recent_activity(limit=10):
         activity.append({
             'date': receipt.created_at.strftime('%Y-%m-%d %H:%M'),
             'vendor': receipt.vendor or 'Unknown',
-            'amount': receipt.total or 0,
+            'amount': receipt.total_amount or 0,
             'job_number': receipt.job.job_number if receipt.job else 'Unassigned',
             'upload_method': receipt.upload_method,
             'uploaded_by': receipt.phone_number if receipt.upload_method == 'sms' else receipt.uploaded_by
