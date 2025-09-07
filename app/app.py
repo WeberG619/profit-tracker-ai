@@ -236,6 +236,76 @@ def dashboard():
     jobs = get_jobs_summary()
     return render_template('dashboard.html', stats=stats, jobs=jobs)
 
+@app.route('/upload-test', methods=['GET', 'POST'])
+@login_required
+@company_required
+def upload_test():
+    """Simple upload test without OCR"""
+    if request.method == 'GET':
+        return '''
+        <html><body>
+        <h2>Simple Upload Test</h2>
+        <form method="POST" enctype="multipart/form-data">
+            <input type="file" name="file" accept=".pdf,.jpg,.png" required>
+            <button type="submit">Test Upload</button>
+        </form>
+        </body></html>
+        '''
+    
+    try:
+        file = request.files.get('file')
+        if not file:
+            return "No file provided", 400
+            
+        filename = secure_filename(file.filename)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"{timestamp}_{filename}"
+        
+        # Test saving file
+        upload_folder = app.config.get('UPLOAD_FOLDER', '/tmp/uploads')
+        os.makedirs(upload_folder, exist_ok=True)
+        filepath = os.path.join(upload_folder, filename)
+        
+        file.save(filepath)
+        file_size = os.path.getsize(filepath)
+        
+        # Create basic receipt record
+        receipt = Receipt(
+            company_id=current_user.company_id,
+            image_path=filename,
+            uploaded_by=current_user.username,
+            vendor_name="Test Upload",
+            total_amount=0.0,
+            extracted_data={"test": True, "file_size": file_size}
+        )
+        db.session.add(receipt)
+        db.session.commit()
+        
+        # Clean up test file
+        os.remove(filepath)
+        
+        return f'''
+        <html><body>
+        <h2>Upload Test Successful!</h2>
+        <p>File: {filename}</p>
+        <p>Size: {file_size} bytes</p>
+        <p>Receipt ID: {receipt.id}</p>
+        <p>Upload folder: {upload_folder}</p>
+        <a href="/">Back to main app</a>
+        </body></html>
+        '''
+        
+    except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        return f'''
+        <html><body>
+        <h2>Upload Test Failed</h2>
+        <p>Error: {str(e)}</p>
+        <pre>{error_trace}</pre>
+        </body></html>
+        ''', 500
+
 @app.route('/upload', methods=['POST'])
 @login_required
 @company_required
