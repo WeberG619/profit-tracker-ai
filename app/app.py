@@ -72,6 +72,35 @@ def init_db():
         
         db.session.commit()
 
+@app.route('/health')
+def health_check():
+    """Health check endpoint"""
+    try:
+        # Test database connection
+        from sqlalchemy import text
+        db.session.execute(text('SELECT 1'))
+        db_status = 'connected'
+        db_uri = app.config.get('SQLALCHEMY_DATABASE_URI', 'not set')
+        if 'memory' in db_uri:
+            db_type = 'sqlite-memory'
+        elif 'sqlite' in db_uri:
+            db_type = 'sqlite-file'
+        elif 'postgresql' in db_uri:
+            db_type = 'postgresql'
+        else:
+            db_type = 'unknown'
+    except Exception as e:
+        db_status = f'error: {str(e)}'
+        db_type = 'error'
+    
+    return jsonify({
+        'status': 'ok',
+        'database': db_status,
+        'database_type': db_type,
+        'render': bool(os.environ.get('RENDER')),
+        'has_database_url': bool(os.environ.get('DATABASE_URL'))
+    })
+
 @app.route('/')
 @login_required
 @company_required
