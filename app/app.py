@@ -536,6 +536,68 @@ def health_status():
 
 @app.route('/dashboard')
 @login_required
+def dashboard_simple():
+    """Simple dashboard without company requirement"""
+    return f'''
+    <html>
+    <head>
+        <title>Dashboard - Profit Tracker AI</title>
+        <style>
+            body {{ font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }}
+            .container {{ max-width: 1200px; margin: 0 auto; }}
+            .header {{ background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }}
+            .card {{ background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; }}
+            .stats {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }}
+            .stat-card {{ background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; }}
+            .stat-card h3 {{ margin: 0; color: #666; font-size: 14px; }}
+            .stat-card p {{ margin: 10px 0 0 0; font-size: 32px; font-weight: bold; }}
+            .btn {{ background: #667eea; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; }}
+            .btn:hover {{ background: #5a67d8; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>Welcome, {current_user.username}!</h1>
+                <a href="/logout" class="btn">Logout</a>
+            </div>
+            
+            <div class="card">
+                <h2>Quick Actions</h2>
+                <a href="/upload" class="btn">Upload Receipt/Invoice</a>
+                <a href="/list" class="btn" style="background: #48bb78; margin-left: 10px;">View All Documents</a>
+                <a href="/accounts-receivable" class="btn" style="background: #ed8936; margin-left: 10px;">Accounts Receivable</a>
+            </div>
+            
+            <div class="stats">
+                <div class="stat-card">
+                    <h3>Total Documents</h3>
+                    <p>Loading...</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Expenses</h3>
+                    <p style="color: #e53e3e;">Loading...</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Income</h3>
+                    <p style="color: #48bb78;">Loading...</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Net Profit</h3>
+                    <p>Loading...</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <p>Your Profit Tracker AI system is ready to use! Start by uploading your first receipt or invoice.</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    '''
+
+@app.route('/dashboard-full')
+@login_required
 @company_required
 def company_dashboard():
     """Company-specific dashboard showing stats and recent receipts"""
@@ -1364,27 +1426,49 @@ def login():
             password = request.form.get('password')
             
             if not username or not password:
-                flash('Please enter both username and password', 'error')
-                return render_template('login.html')
+                return '''<html><body style="font-family: sans-serif; text-align: center; padding: 50px;">
+                    <h1>Login Error</h1>
+                    <p>Please enter both username and password</p>
+                    <p><a href="/login">Try again</a></p>
+                </body></html>'''
             
             user = User.query.filter_by(username=username).first()
             
             if user and user.check_password(password):
                 # Ensure user has a company
                 if not user.company_id:
-                    flash('Account configuration error. Please contact support.', 'error')
                     logger.error(f"User {username} has no company_id")
-                    return render_template('login.html')
+                    return '''<html><body style="font-family: sans-serif; text-align: center; padding: 50px;">
+                        <h1>Account Error</h1>
+                        <p>Your account is not properly configured. Please contact support.</p>
+                        <p><a href="/login">Back to login</a></p>
+                    </body></html>'''
                 
                 login_user(user, remember=True)
-                next_page = request.args.get('next')
-                return redirect(next_page) if next_page else redirect(url_for('company_dashboard'))
+                # Simplified redirect - just go to dashboard
+                return '''<html><head><meta http-equiv="refresh" content="0; url=/dashboard"></head>
+                    <body>Redirecting to dashboard...</body></html>'''
             else:
-                flash('Invalid username or password', 'error')
+                return '''<html><body style="font-family: sans-serif; text-align: center; padding: 50px;">
+                    <h1>Login Failed</h1>
+                    <p>Invalid username or password</p>
+                    <p>Demo account: username=admin, password=admin123</p>
+                    <p><a href="/login">Try again</a></p>
+                </body></html>'''
                 
         except Exception as e:
             logger.error(f"Login error: {str(e)}")
-            flash('An error occurred during login. Please try again.', 'error')
+            import traceback
+            tb = traceback.format_exc()
+            return f'''<html><body style="font-family: sans-serif; padding: 50px;">
+                <h1>Login Error</h1>
+                <p style="color: red;">Error: {str(e)}</p>
+                <details>
+                    <summary>Debug Info</summary>
+                    <pre style="background: #f0f0f0; padding: 10px;">{tb}</pre>
+                </details>
+                <p><a href="/login">Try again</a></p>
+            </body></html>'''
     
     # Always return simple HTML login form to avoid template issues
     return '''
