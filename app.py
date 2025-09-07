@@ -1420,7 +1420,7 @@ def index():
         
         <!-- How it Works Section -->
         <div class="how-section" id="how">
-            <h2 style="text-align: center; font-size: 3rem; margin-bottom: 3rem;">How It Works</h2>
+            <h2 style="text-align: center; font-size: 3rem; margin-bottom: 3rem; color: #1a1a1a;">How It Works</h2>
             <div style="max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 3rem;">
                 <div class="step-card">
                     <div class="step-number">1</div>
