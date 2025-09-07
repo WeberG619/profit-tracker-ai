@@ -18,6 +18,7 @@ from .export_utils import export_receipts_csv, export_job_summary_pdf, export_re
 from .scheduler import job_scheduler
 from .auth import login_manager, company_required
 from .money_losers import check_job_keywords
+from .duplicate_detector import DuplicateDetector
 from twilio.twiml.messaging_response import MessagingResponse
 import logging
 
@@ -653,12 +654,45 @@ def upload_file():
                 extracted_data = process_receipt_image(filepath)
                 logger.info(f"OCR completed: {extracted_data}")
                 
-                # Update receipt with extracted data
+                # Check for duplicates BEFORE saving
+                recent_receipts = Receipt.query.filter_by(company_id=current_user.company_id)\
+                    .filter(Receipt.id != receipt.id)\
+                    .order_by(Receipt.created_at.desc())\
+                    .limit(100)\
+                    .all()
+                
+                is_duplicate, duplicate_info = DuplicateDetector.check_for_duplicates(
+                    extracted_data, recent_receipts, current_user.company_id
+                )
+                
+                if is_duplicate:
+                    # Delete the newly created receipt since it's a duplicate
+                    db.session.delete(receipt)
+                    db.session.commit()
+                    
+                    # Clean up the uploaded file
+                    try:
+                        os.remove(filepath)
+                    except:
+                        pass
+                    
+                    logger.warning(f"Duplicate receipt detected for company {current_user.company_id}")
+                    
+                    return jsonify({
+                        'success': False,
+                        'duplicate': True,
+                        'duplicate_info': duplicate_info,
+                        'message': f"This appears to be a duplicate receipt! It matches {duplicate_info['match_percentage']:.0f}% with a receipt from {duplicate_info['vendor']} for ${duplicate_info['total']:.2f} uploaded on {duplicate_info['uploaded_at']}.",
+                        'existing_receipt_id': duplicate_info['receipt_id']
+                    })
+                
+                # Not a duplicate, proceed with saving
                 receipt.vendor_name = extracted_data.get('vendor')
                 receipt.total_amount = extracted_data.get('total')
                 receipt.date = datetime.strptime(extracted_data.get('date'), '%Y-%m-%d').date() if extracted_data.get('date') else None
                 receipt.receipt_number = extracted_data.get('receipt_number')
                 receipt.extracted_data = extracted_data
+                receipt.receipt_hash = DuplicateDetector.generate_receipt_hash(extracted_data)
                 
                 # Add line items
                 for item in extracted_data.get('line_items', []):
@@ -670,7 +704,25 @@ def upload_file():
                     )
                     db.session.add(line_item)
                 
+                # Find similar receipts for awareness
+                similar_receipts = DuplicateDetector.find_similar_receipts(
+                    extracted_data, recent_receipts, limit=3
+                )
+                
                 db.session.commit()
+                
+                response_data = {
+                    'success': True,
+                    'receipt_id': receipt.id,
+                    'redirect': url_for('review_receipt', receipt_id=receipt.id),
+                    'message': f'Receipt uploaded successfully. ID: {receipt.id}'
+                }
+                
+                if similar_receipts:
+                    response_data['similar_receipts'] = similar_receipts
+                    response_data['has_similar'] = True
+                
+                return jsonify(response_data)
                 
             except Exception as e:
                 logger.error(f"Error processing receipt: {str(e)}", exc_info=True)

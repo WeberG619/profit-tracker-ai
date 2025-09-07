@@ -45,6 +45,7 @@ class Receipt(db.Model):
     uploaded_by = db.Column(db.String(100))
     phone_number = db.Column(db.String(20))  # Track SMS sender
     upload_method = db.Column(db.String(20), default='web')  # 'web' or 'sms'
+    receipt_hash = db.Column(db.String(64))  # MD5 hash for quick duplicate checking
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
