@@ -2,7 +2,7 @@
 Authentication and authorization utilities
 """
 
-from flask import redirect, url_for, flash, request, session
+from flask import redirect, url_for, flash, request, session, jsonify
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from functools import wraps
 from .models import User, Company
@@ -16,12 +16,25 @@ login_manager.login_message = 'Please log in to access this page.'
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+@login_manager.unauthorized_handler
+def unauthorized():
+    """Return JSON for AJAX/API requests, redirect for regular requests"""
+    # Check if this is an AJAX request or API endpoint
+    if request.is_json or request.path.startswith('/api/') or request.path in ['/upload', '/upload-debug', '/upload-test']:
+        return jsonify({'error': 'Authentication required', 'redirect': url_for('login')}), 401
+    # Regular request - redirect to login
+    return redirect(url_for('login'))
+
 def company_required(f):
     """Decorator to ensure user has a company"""
     @wraps(f)
     @login_required
     def decorated_function(*args, **kwargs):
         if not current_user.company_id:
+            # Return JSON for AJAX/API requests
+            if request.is_json or request.path.startswith('/api/') or request.path in ['/upload', '/upload-debug']:
+                return jsonify({'error': 'Company setup required', 'redirect': url_for('setup')}), 403
+            # Regular request - redirect to setup
             flash('Please complete company setup first.', 'warning')
             return redirect(url_for('setup'))
         

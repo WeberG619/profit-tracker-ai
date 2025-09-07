@@ -27,6 +27,22 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.config.from_object(Config)
 
+# Check required environment variables on startup
+required_vars = {
+    'ANTHROPIC_API_KEY': 'Required for OCR processing of receipts',
+    'DATABASE_URL': 'Required for data persistence (PostgreSQL)'
+}
+
+missing_vars = []
+for var, description in required_vars.items():
+    if not os.getenv(var):
+        missing_vars.append(f"- {var}: {description}")
+        logger.warning(f"Missing environment variable: {var}")
+
+if missing_vars:
+    logger.warning("Missing required environment variables:\n" + "\n".join(missing_vars))
+    logger.warning("The app will run but some features may not work properly.")
+
 # Initialize database
 db.init_app(app)
 

@@ -29,12 +29,30 @@
 
 ## 🚀 Quick Start
 
-### Deploy to Production (Recommended)
+### Deploy to Render (Recommended)
+
+1. **Fork this repository** to your GitHub account
+
+2. **Deploy to Render**:
+   - Sign up at [render.com](https://render.com)
+   - Create a new PostgreSQL database (free tier)
+   - Create a new Web Service from your forked repo
+   - Add environment variables:
+     - `DATABASE_URL` - From your PostgreSQL database
+     - `ANTHROPIC_API_KEY` - From [anthropic.com](https://anthropic.com)
+     - `SECRET_KEY` - Any random string
+     - `TWILIO_*` - Optional, for SMS features
+
+3. **Initialize Database**:
+   - Visit `https://your-app.onrender.com/init-db-emergency`
+   - Creates tables and admin user (admin/admin123)
+
+### Deploy to Heroku
 
 [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/WeberG619/profit-tracker-ai)
 
 1. Click the button above
-2. Enter your OpenAI API key
+2. Enter your Anthropic API key
 3. Optional: Add Twilio credentials for SMS
 4. Deploy and start tracking profits!
 
@@ -74,11 +92,11 @@ python app/app.py
 ## 💻 Tech Stack
 
 - **Backend**: Python 3.9+, Flask 3.0
-- **AI**: OpenAI GPT-4 Vision API
+- **AI**: Anthropic Claude 3.5 Vision API
 - **Database**: PostgreSQL (production), SQLite (development)
 - **SMS**: Twilio API
 - **Frontend**: Tailwind CSS, Chart.js
-- **Deployment**: Heroku, Docker, DigitalOcean
+- **Deployment**: Render, Heroku, Docker
 
 ## 📸 Screenshots
 
