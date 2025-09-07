@@ -9,6 +9,13 @@
         <h1 class="text-3xl font-bold text-gray-800">{{ current_user.company.name }} Dashboard</h1>
         <p class="text-gray-600">Welcome, {{ current_user.username }}</p>
     </div>
+    
+    {% if error_message %}
+    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+        <p class="text-yellow-800">{{ error_message }}</p>
+        <p class="text-sm text-yellow-600 mt-2">Try refreshing the page or <a href="{{ url_for('migrate_database') }}" class="underline">run database migration</a>.</p>
+    </div>
+    {% endif %}
 
     <!-- Quick Stats -->
     <div class="grid md:grid-cols-4 gap-6 mb-8">

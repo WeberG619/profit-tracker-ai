@@ -51,6 +51,28 @@ db.init_app(app)
 # Initialize login manager
 login_manager.init_app(app)
 
+# Database initialization and migration on startup
+with app.app_context():
+    try:
+        # Create tables if they don't exist
+        db.create_all()
+        logger.info("Database tables created/verified")
+        
+        # Run migrations
+        from sqlalchemy import text
+        try:
+            db.session.execute(text("SELECT receipt_hash FROM receipt LIMIT 1"))
+        except:
+            try:
+                db.session.execute(text("ALTER TABLE receipt ADD COLUMN receipt_hash VARCHAR(64)"))
+                db.session.commit()
+                logger.info("Added receipt_hash column to receipt table")
+            except Exception as e:
+                logger.warning(f"Could not add receipt_hash column: {str(e)}")
+                
+    except Exception as e:
+        logger.error(f"Database initialization error: {str(e)}")
+
 # Initialize scheduler
 try:
     if not app.config.get('TESTING'):
@@ -81,20 +103,7 @@ def allowed_file(filename):
 def init_db():
     with app.app_context():
         db.create_all()
-        
-        # Create test jobs if they don't exist
-        test_jobs = [
-            {'job_number': '1001', 'customer_name': 'Johnson Construction', 'quoted_price': 15000.00},
-            {'job_number': '1002', 'customer_name': 'Smith Renovations', 'quoted_price': 8500.00},
-            {'job_number': '1003', 'customer_name': 'Davis Plumbing', 'quoted_price': 3200.00}
-        ]
-        
-        for job_data in test_jobs:
-            if not Job.query.filter_by(job_number=job_data['job_number']).first():
-                job = Job(**job_data)
-                db.session.add(job)
-        
-        db.session.commit()
+        logger.info("Database tables created successfully")
 
 @app.route('/test-receipts')
 @login_required
@@ -220,29 +229,30 @@ def migrate_database():
         from sqlalchemy import text
         migrations_applied = []
         
+        # Create all tables first
+        db.create_all()
+        migrations_applied.append("Ensured all tables exist")
+        
         # Try to add receipt_hash column if it doesn't exist
         try:
             db.session.execute(text("SELECT receipt_hash FROM receipt LIMIT 1"))
         except:
             # Column doesn't exist, add it
-            db.session.execute(text("ALTER TABLE receipt ADD COLUMN receipt_hash VARCHAR(64)"))
-            db.session.commit()
-            migrations_applied.append("Added receipt_hash column to receipt table")
+            try:
+                db.session.execute(text("ALTER TABLE receipt ADD COLUMN receipt_hash VARCHAR(64)"))
+                db.session.commit()
+                migrations_applied.append("Added receipt_hash column to receipt table")
+            except Exception as e:
+                logger.warning(f"Could not add receipt_hash: {str(e)}")
         
         # Add more migrations here as needed
         
-        if migrations_applied:
-            return jsonify({
-                'status': 'success',
-                'message': 'Migrations applied successfully',
-                'migrations': migrations_applied
-            })
-        else:
-            return jsonify({
-                'status': 'success',
-                'message': 'No migrations needed',
-                'migrations': []
-            })
+        return jsonify({
+            'status': 'success',
+            'message': 'Migrations completed',
+            'migrations': migrations_applied,
+            'redirect_to_dashboard': url_for('company_dashboard')
+        })
             
     except Exception as e:
         logger.error(f"Migration error: {str(e)}")
@@ -520,8 +530,16 @@ def company_dashboard():
             # Column might already exist or other error
             pass
         
-        flash('Error loading dashboard. Please try again.', 'error')
-        return redirect(url_for('upload_page'))
+        # Create a simple fallback dashboard
+        return render_template('company_dashboard.html', 
+                             stats={
+                                 'total_receipts': 0,
+                                 'total_expenses': 0,
+                                 'active_jobs': 0,
+                                 'month_expenses': 0
+                             }, 
+                             recent_receipts=[],
+                             error_message=f"Dashboard data temporarily unavailable. Error: {str(e)}")
 
 @app.route('/upload')
 @login_required
@@ -914,8 +932,20 @@ def list_receipts():
         return render_template('list.html', receipts=receipts)
     except Exception as e:
         logger.error(f"Error in list_receipts: {str(e)}", exc_info=True)
-        flash('Error loading receipts. Please try again.', 'error')
-        return redirect(url_for('company_dashboard'))
+        
+        # Try to add missing columns
+        try:
+            from sqlalchemy import text
+            db.session.execute(text("ALTER TABLE receipt ADD COLUMN receipt_hash VARCHAR(64)"))
+            db.session.commit()
+            # Retry
+            return redirect(url_for('list_receipts'))
+        except:
+            pass
+            
+        # Return empty list with error message
+        flash('Error loading receipts. Showing empty list.', 'error')
+        return render_template('list.html', receipts=[])
 
 @app.route('/api/jobs')
 @login_required
